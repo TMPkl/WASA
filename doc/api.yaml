@@ -1,0 +1,91 @@
+openapi: 3.0.3
+info:
+  title: Simplified login API specification
+  description: |-
+    This OpenAPI document describes the simplified login API.
+    Copy and paste the API from the `paths` key to your OpenAPI document.
+  version: "1"
+tags:
+  - name: login
+    description: Login and authorisation
+  - name: profile
+    description: User profile
+  - name: conversations
+    description: Chats and conversations
+  - name: messages
+    description: Messages
+  - name: groups
+    description: Group menagment 
+paths:
+  /sesion:
+    post:
+      tags: ["login"]
+      summary: Logs in the user
+      description: |-
+        - If the user does  not exist, it will be created and an indentifier is returned.
+        If the user exists, the user indentifier is returned.
+      operationId: doLogin
+      requestBody: 
+        description: User details
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: 
+                name:
+                  type: string
+                  example: 
+                    - Maria
+                  pattern: '^.*?$'
+                  minLength: 3
+                  maxLength: 16
+        required: true
+      responses:
+        '201':
+          description: User log-in action successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  indentifier:
+                    type: string
+                    example: "abcdef012345"
+  /myProfile:
+      post:
+      tags: ["profile"]
+      summary: Set my username
+      description: Updates the username of the currently authenticated user.
+      operationId: setMyUserName
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: New username for the authenticated user
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 16
+                  example: TMPkl2137
+      responses:
+        '204':
+          description: Username updated successfully
+        '400':
+          description: Invalid username
+        '401':
+          description: Unauthorized (missing or invalid token)
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+
