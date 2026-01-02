@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Simplified Login API
   description: >
-    This OpenAPI document describes a simplified login API.
+    This OpenAPI document describes a WASAtext project.
   version: "1.0.0"
 
 tags:
@@ -57,11 +57,11 @@ paths:
                     type: string
                     example: abcdef012345
 
-  /myProfile:
-    post:
+  /me:
+    patch:
       tags:
         - profile
-      summary: Set my username
+      summary: Updates my username
       description: Updates the username of the authenticated user.
       operationId: setMyUserName
       security:
@@ -104,8 +104,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Conversation'
-        '204':
-          description: no conversations data, request successful proccesed 
         '401':
           description: Unauthorized request, JWT key is wrong
   /conversations/with/{userId}:
@@ -134,40 +132,111 @@ paths:
           description: Unauthorized request, JWT key is wrong
         '404':
           description: Convers with UserID does not exist
-  /conversations/with/{userId}/sendMessage:
-  post:
-    tags:
-      - messages
-    summary: Send a message
-    description: Send a single message to a user
-    operationId: sendMessage
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: userId
-        in: path
-        required: true
-        schema:
-          type: string
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/MessageCreate'
-    responses:
-        "201":
-          description: Message successful send
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Message'
-        "400":
-          description: Invalid input data
-        "401":
-          description: Unauthorized (missing or invalid token)
 
-        
+  /conversations/with/{userId}/sendMessage:
+    post:
+      tags:
+        - messages
+      summary: Send a message
+      description: Send a single message to a user
+      operationId: sendMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+      responses:
+          "201":
+            description: Message successful send
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Message'
+          "400":
+            description: Invalid input data
+          "401":
+            description: Unauthorized (missing or invalid token)
+  /conversations/{messageId}/forward:
+    post:
+      tags:
+        - messages
+      summary: forward a message
+      description: forward a single message to a user
+      operationId: forwardMessage
+      security:
+        - bearerAuth: []
+      parameters:
+          - name: messageId
+            in: path
+            required: true
+            schema:
+              type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+      responses:
+          "201":
+            description: Message successful forwarded
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Message'
+          "400":
+            description: Invalid input data
+          "401":
+            description: Unauthorized (missing or invalid token)
+          "404":
+            description: Original message or receiver not found
+  /conversations/{messageId}/comment:
+    post:
+      tags:
+        - messages
+      summary: comment a message
+      description: comment a single message to a user
+      operationId: commentMessage
+      security:
+        - bearerAuth: []
+      parameters:
+          - name: messageId
+            in: path
+            required: true
+            schema:
+              type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+      responses:
+          "201":
+            description: Message successful commented
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Message'
+          "400":
+            description: Invalid input data
+          "401":
+            description: Unauthorized (missing or invalid token)
+          "404":
+            description: Original message not found
+            
+
+#---------------------- Schemas ----------------------#
+          
 
 components:
   securitySchemes:
@@ -228,3 +297,6 @@ components:
           items:
             type: string  # tez nie wiem czy to porpawan metoda robienia tego ale wywalone
           description: attachemnts URLs? #jeszcze zobacze jak to zrobic 
+        respondedToMessageId:
+          type: string
+          description: ID of the message being responded to
