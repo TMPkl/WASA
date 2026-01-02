@@ -134,6 +134,40 @@ paths:
           description: Unauthorized request, JWT key is wrong
         '404':
           description: Convers with UserID does not exist
+  /conversations/with/{userId}/sendMessage:
+  post:
+    tags:
+      - messages
+    summary: Send a message
+    description: Send a single message to a user
+    operationId: sendMessage
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageCreate'
+    responses:
+        "201":
+          description: Message successful send
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        "400":
+          description: Invalid input data
+        "401":
+          description: Unauthorized (missing or invalid token)
+
+        
 
 components:
   securitySchemes:
@@ -151,13 +185,46 @@ components:
           type: array
           items:
             type: string
-        lastMessageTime:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    Message:
+      type: object
+      properties:
+        id:
           type: string
-          description: timestamp of last Messages
+        conversationId:
+          type: string
+        senderId:
+          type: string
+        content:
+          type: string
+        timestamp:
+          type: string
           format: date-time
-        lastMessageState: 
+        status:
           type: string
           enum:
             - sent
             - delivered
             - read
+        attachments:
+          type: array
+          items:
+            type: string  #tak jak wczesnij, kto wie co zrobic
+    MessageCreate:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          example: Hello, how are you?
+          minLength: 1
+          maxLength: 500
+        attachments:
+          type: array
+          items:
+            type: string  # tez nie wiem czy to porpawan metoda robienia tego ale wywalone
+          description: attachemnts URLs? #jeszcze zobacze jak to zrobic 
