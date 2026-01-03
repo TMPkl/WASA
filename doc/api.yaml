@@ -3,7 +3,7 @@ info:
   title: Simplified Login API
   description: >
     This OpenAPI document describes a WASAtext project.
-  version: "1.0.0"
+  version: "2.0.1"
 
 tags:
   - name: login
@@ -297,11 +297,17 @@ paths:
               properties:
                 groupName:
                   type: string
-                  example: Friends Group
                 memberIds:
                   type: array
                   items:
                     type: string
+            example:
+              groupName: "Friends Group"
+              memberIds:
+                - user_1
+                - user_2
+                - user_3
+
       responses:
           "201":
             description: Group successfully created
@@ -480,20 +486,37 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  schemas: 
+  schemas:
     Conversation:
       type: object
       properties:
         id:
           type: string
+          example: conv_12345
         participants:
           type: array
           items:
             type: string
+          example:
+            - user_1
+            - user_2
         messages:
           type: array
           items:
             $ref: '#/components/schemas/Message'
+      example:
+        id: conv_12345
+        participants:
+          - user_1
+          - user_2
+        messages:
+          - id: msg_1
+            conversationId: conv_12345
+            senderId: user_1
+            content: "Ciao!"
+            timestamp: "2004-10-22T21:37:00Z"
+            status: sent
+            attachments: []
     Message:
       type: object
       properties:
@@ -517,7 +540,7 @@ components:
         attachments:
           type: array
           items:
-            type: string  #tak jak wczesnij, kto wie co zrobic
+            type: string
     MessageCreate:
       type: object
       required:
@@ -531,14 +554,16 @@ components:
         attachments:
           type: array
           items:
-            type: string  # tez nie wiem czy to porpawan metoda robienia tego ale wywalone
-          description: attachemnts URLs? #jeszcze zobacze jak to zrobic 
+            type: string
+          description: attachment URLs
         respondedToMessageId:
           type: string
           description: ID of the message being responded to
     MessageEmoji:
       type: object
+      required:
+        - emoji
       properties:
-      emoji:
-        type: string
-        example: "😊"
+        emoji:
+          type: string
+          example: "<:"
