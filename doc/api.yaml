@@ -57,7 +57,7 @@ paths:
                     type: string
                     example: abcdef012345
 
-  /me:
+  /me/username:
     patch:
       tags:
         - profile
@@ -204,7 +204,7 @@ paths:
       tags:
         - messages
       summary: comment a message
-      description: comment a single message to a user
+      description: comment a single message using emoji
       operationId: commentMessage
       security:
         - bearerAuth: []
@@ -219,23 +219,259 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MessageCreate'
+              $ref: '#/components/schemas/MessageEmoji'
       responses:
           "201":
             description: Message successful commented
             content:
               application/json:
                 schema:
-                  $ref: '#/components/schemas/Message'
+                  $ref: '#/components/schemas/MessageEmoji'
           "400":
             description: Invalid input data
           "401":
             description: Unauthorized (missing or invalid token)
           "404":
             description: Original message not found
-            
+  /conversations/{messageId}/uncomment:
+    delete:
+      tags:
+        - messages
+      summary: uncomment a message
+      description: remove comment from a single message
+      operationId: uncommentMessage
+      security:
+        - bearerAuth: []
+      parameters:
+          - name: messageId
+            in: path
+            required: true
+            schema:
+              type: string
+      responses:
+          "204":
+            description: Message successful uncommented
+          "401":
+            description: Unauthorized (missing or invalid token)
+          "404":
+            description: Original message or comment not found
+  /conversations/{messageId}/delete:
+    delete:
+      tags:
+        - messages
+      summary: delete a message
+      description: delete a single message
+      operationId: deleteMessage
+      security:
+        - bearerAuth: []
+      parameters:
+          - name: messageId
+            in: path
+            required: true
+            schema:
+              type: string
+      responses:
+          "204":
+            description: Message successful deleted
+          "401":
+            description: Unauthorized (missing or invalid token)
+          "404":
+            description: Original message not found
+  /groups/create:
+    post:
+      tags:
+        - groups
+      summary: Create a group
+      description: Create a new group with specified members
+      operationId: createGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - groupName
+              properties:
+                groupName:
+                  type: string
+                  example: Friends Group
+                memberIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+          "201":
+            description: Group successfully created
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    groupId:
+                      type: string
+          "400":
+            description: Invalid input data
+          "401":
+            description: Unauthorized (missing or invalid token)
+  /groups/{groupId}/addMember:
+    post:
+      tags:
+        - groups
+      summary: Add member to a group
+      description: Add a new member to an existing group
+      operationId: addToGroup
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - memberId
+              properties:
+                memberId:
+                  type: string
+      responses:
+          "200":
+            description: Member successfully added to group
+          "400":
+            description: Invalid input data
+          "401":
+            description: Unauthorized (missing or invalid token)
+          "404":
+            description: Group not found
+  /groups/{groupId}/leave:
+    post:
+      tags:
+        - groups
+      summary: Leave a group
+      description: Remove the authenticated user from the specified group
+      operationId: leaveGroup
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+          "200":
+            description: Successfully left the group
+          "401":
+            description: Unauthorized (missing or invalid token)
+          "404":
+            description: Group not found
+  /groups/{groupId}/setName:
+    patch:
+      tags:
+        - groups
+      summary: Set group name
+      description: Update the name of the specified group
+      operationId: setGroupName
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - groupName
+              properties:
+                groupName:
+                  type: string
+                  example: New Group Name
+      responses:
+          "200":
+            description: Group name successfully updated
+          "400":
+            description: Invalid input data
+          "401":
+            description: Unauthorized (missing or invalid token)
+          "404":
+            description: Group not found
+  /me/photo:
+    post:
+      tags:
+        - profile
+      summary: Upload or update my profile photo
+      description: Uploads or updates the profile photo of the authenticated user.
+      operationId: setMyPhoto
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Profile photo successfully uploaded or updated
+        "400":
+          description: Invalid photo format or size
+        "401":
+          description: Unauthorized (missing or invalid token)
+  /groups/{groupId}/photo:
+    post:
+      tags:
+        - groups
+      summary: Upload or update group photo
+      description: Uploads or updates the photo of the specified group.
+      operationId: setGroupPhoto
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Group photo successfully uploaded or updated
+        "400":
+          description: Invalid photo format or size
+        "401":
+          description: Unauthorized (missing or invalid token)
+        "404":
+          description: Group not found
 
-#---------------------- Schemas ----------------------#
+
+#--------------------- Schemas ----------------------#
           
 
 components:
@@ -300,3 +536,9 @@ components:
         respondedToMessageId:
           type: string
           description: ID of the message being responded to
+    MessageEmoji:
+      type: object
+      properties:
+      emoji:
+        type: string
+        example: "😊"
