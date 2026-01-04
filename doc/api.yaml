@@ -6,22 +6,18 @@ info:
   version: "2.0.1"
 
 tags:
-  - name: login
-    description: Login and authorization
   - name: profile
     description: User profile
-  - name: conversations
-    description: Chats and conversations
   - name: messages
     description: Messages
   - name: groups
     description: Group management
 
 paths:
-  /session:
+  /login:
     post:
       tags:
-        - login
+        - profile
       summary: Logs in the user
       description: >
         If the user does not exist, it is created and an identifier is returned.
