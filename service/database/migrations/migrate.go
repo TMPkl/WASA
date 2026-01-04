@@ -21,5 +21,15 @@ func Migrate(db *sql.DB) error {
 	} else {
 		fmt.Println("	DB -> migration create_groups applied")
 	}
+	if err := create_conversations(db); err != nil {
+		return fmt.Errorf("migration create_conversations failed: %w", err)
+	} else {
+		fmt.Println("	DB -> migration create_conversations applied")
+	}
+	if err := create_messages(db); err != nil {
+		return fmt.Errorf("migration create_messages failed: %w", err)
+	} else {
+		fmt.Println("	DB -> migration create_messages applied")
+	}
 	return nil
 }

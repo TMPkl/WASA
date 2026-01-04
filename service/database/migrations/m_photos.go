@@ -7,7 +7,10 @@ import (
 
 func create_user_photos(db *sql.DB) error {
 	sqlStmt := `
-	CREATE TABLE IF NOT EXISTS users_photos (
+	CREATE TABLE IF NOT EXISTS Users_photos (
+		photo_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		photo_data BLOB NOT NULL);
+	CREATE TABLE IF NOT EXISTS Group_photos (
 		photo_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		photo_data BLOB NOT NULL
 	);`

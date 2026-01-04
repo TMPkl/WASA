@@ -16,3 +16,5 @@ docker-compose.log
 !.vscode/extensions.json
 
 /service/api/example/
+schema.dbml
+schema.sql
