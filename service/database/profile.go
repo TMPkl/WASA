@@ -19,3 +19,15 @@ func (db *appdbimpl) AddNewUser(username string) error {
 	_, err = db.c.Exec("INSERT INTO users (username) VALUES (?)", username)
 	return err
 }
+
+func (db *appdbimpl) UpdateUsername(oldUsername, newUsername string) error {
+	exist, err := db.UserExists(newUsername)
+	if err != nil {
+		return errors.New("Database error")
+	}
+	if exist {
+		return errors.New("New username already exists")
+	}
+	_, err = db.c.Exec("UPDATE users SET username=? WHERE username=?", newUsername, oldUsername)
+	return err
+}

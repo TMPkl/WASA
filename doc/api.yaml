@@ -73,17 +73,34 @@ paths:
               type: object
               required:
                 - username
+                - new-username
               properties:
                 username:
                   type: string
                   minLength: 5
                   maxLength: 16
                   example: TMPkl2137
+                new-username:
+                  type: string
+                  minLength: 5
+                  maxLength: 16
+                  example: TMPkl2137
       responses:
+        "200":
+          description: Username successfully updated, new Bearer token returned
+          body:
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    token:
+                      type: string
+                      example: abcdef012345
         "400":
-          description: Invalid username
+          description: Invalid request body
         "401":
-          description: Unauthorized (missing or invalid token)
+          description: Unauthorized missing or invalid token
   /conversations/me:
     get:
       tags: 

@@ -33,11 +33,11 @@ func (rt *_router) checkUser(r *http.Request) (string, bool, error) {
 	}
 
 	if req.Username == "" {
-		err := errors.New("Username query parameter is required")
+		err := errors.New("Username is required")
 		return "", false, err
 	}
 
-	// Sprawdź czy użytkownik istnieje
+	// czy uzytkownik juz istnieje
 	exists, err := rt.db.UserExists(req.Username)
 	if err != nil {
 		return "", false, err
@@ -55,12 +55,12 @@ func GenerateJWT(secret []byte, username string) (string, error) {
 	return token.SignedString(secret)
 }
 
-func VerifyJWT(tokenStr string) (*jwt.Token, error) {
+func verifyJWT(tokenStr string) (*jwt.Token, error) {
 	return jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
-		return secret, nil
+		return []byte(secret), nil
 	})
 }
 
@@ -74,10 +74,6 @@ func (rt *_router) login(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	}
 	if !exists {
 		rt.db.AddNewUser(username)
-		if err != nil {
-			http.Error(w, "Error creating user", http.StatusInternalServerError)
-			return
-		}
 	}
 	token, err := GenerateJWT([]byte(secret), username)
 	if err != nil {
@@ -88,4 +84,61 @@ func (rt *_router) login(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(respons)
+}
+
+// ##############UpdateMyUsername##################
+type UpdateMyUsernameRequest struct {
+	Username    string `json:"username"`
+	NewUsername string `json:"new-username"`
+}
+
+func (rt *_router) UpdateMyUsername(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var req UpdateMyUsernameRequest
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	err := decoder.Decode(&req)
+
+	if len(req.NewUsername) < 5 || len(req.NewUsername) > 16 || req.NewUsername == "" {
+		rt.baseLogger.Printf("Username must be between 5 and 16 characters")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Username must be between 5 and 16 characters"))
+		return
+	}
+
+	if err != nil {
+		rt.baseLogger.Printf(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		rt.baseLogger.Printf("Invalid request body")
+		return
+	}
+
+	authorised, err := rt.Authorise(w, r, req.Username)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !authorised {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	err = rt.db.UpdateUsername(req.Username, req.NewUsername)
+	if err != nil {
+		rt.baseLogger.Printf(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	token, err := GenerateJWT([]byte(secret), req.NewUsername)
+	if err != nil {
+		http.Error(w, "Error generating token", http.StatusInternalServerError)
+		return
+	}
+	respons := map[string]string{"token": token}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(respons)
+
 }
