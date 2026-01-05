@@ -20,3 +20,18 @@ All API endpoints and schemas are defined in the *OpenAPI* specification.
 For a convenient graphical representation of all resources, please open:
 
 [Graphical API Documentation](doc/api-docs.html) built using the [*Redoc CLI*](https://redocly.com/docs/cli)
+
+
+## 2. Backend and Database
+The backend is implemented in Go and is located in the `service` directory, with the main entry point in `cmd/` directory.
+
+The backend uses a SQLite database to store user data, and the database is created using migrations in `service/database/migrations/`.
+
+### here will be a proper graphical architecture diagram soon...
+----
+
+The backend exposes the API endpoints defined in the OpenAPI specification and handles requests from the frontend.
+
+According to the Go ideology (as far as I get it), the methods responsible for handling API requests are located in the `service/api` directory, while the database interactions are handled in the `service/database` directory. This part of the code is implemented using interfaces to allow for easy swapping of database implementations if needed.
+
+According to the course requirements, I use bearer tokens for user authentication, which are generated using the `github.com/golang-jwt/jwt/v5` package. 
