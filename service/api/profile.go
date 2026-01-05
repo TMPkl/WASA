@@ -2,12 +2,16 @@ package api
 
 ////////////////////example API endpoint
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"net/http"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/julienschmidt/httprouter"
 )
@@ -141,4 +145,58 @@ func (rt *_router) UpdateMyUsername(w http.ResponseWriter, r *http.Request, ps h
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(respons)
 
+}
+
+// ###############SetProfilePhoto######################
+
+func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
+	r.ParseMultipartForm(10 << 10) // limit upload size to 5MB
+
+	file, header, err := r.FormFile("photo")
+	defer file.Close()
+	if err != nil {
+		return nil, errors.New("Error retrieving the file from form data")
+	}
+	if header.Size > 5<<10 {
+		return nil, errors.New("File size exceeds the 5MB limit")
+	}
+
+	//1. sprawdz jakie rozszerzenie
+	buffer := make([]byte, 512)
+	_, err = file.Read(buffer)
+	if err != nil {
+		fmt.Println("cos tma nie mozna odczytac pliku sprawdzajac rozszerzenie bla bla bla bla")
+		return nil, nil
+	}
+	file.Seek(0, 0)
+
+	mimeType := http.DetectContentType(buffer)
+	if mimeType != "image/jpg" && mimeType != "image/png" {
+		return nil, errors.New("Only JPG and PNG files are allowed")
+	}
+
+	//2. ustaw kwadrat 200x200 px
+	img, _, err := image.Decode(file)
+	if err != nil {
+		fmt.Println("cos tma nie mozna zdekodowac obrazu bla bla bla bla")
+		return nil, nil
+	}
+
+	imaging.CropCenter(img, 200, 200) ///kwadratowwanie potem zaleznei od frontu trzeba dobrac transformacje
+	//3. return
+
+	buf := new(bytes.Buffer)
+
+	err = jpeg.Encode(buf, img, &jpeg.Options{Quality: 85})
+	if err != nil {
+		return nil, err
+	}
+
+	imageBytes := buf.Bytes()
+
+	return imageBytes, nil
+}
+
+func (rt *_router) SetProfilePhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// To be implemented
 }
