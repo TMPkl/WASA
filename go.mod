@@ -1,6 +1,6 @@
 module git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated
 
-go 1.17
+go 1.21
 
 require (
 	github.com/ardanlabs/conf v1.5.0
@@ -14,6 +14,7 @@ require (
 
 require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
