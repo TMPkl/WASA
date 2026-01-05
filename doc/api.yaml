@@ -430,25 +430,30 @@ paths:
             description: Unauthorized (missing or invalid token)
           "404":
             description: Group not found
-  /me/photo:
-    post:
-      tags:
-        - profile
-      summary: Upload or update my profile photo
-      description: Uploads or updates the profile photo of the authenticated user.
-      operationId: setMyPhoto
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                photo:
-                  type: string
-                  format: binary
+/me/photo:
+  post:
+    tags:
+      - profile
+    summary: Upload or update my profile photo
+    description: Uploads or updates the profile photo of the authenticated user.
+    operationId: setMyPhoto
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - photo
+              - username
+            properties:
+              photo:
+                type: string
+                format: binary
+              username:
+                type: string
       responses:
         "200":
           description: Profile photo successfully uploaded or updated

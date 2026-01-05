@@ -153,7 +153,6 @@ func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
 	r.ParseMultipartForm(10 << 10) // limit upload size to 5MB
 
 	file, header, err := r.FormFile("photo")
-	defer file.Close()
 	if err != nil {
 		return nil, errors.New("Error retrieving the file from form data")
 	}

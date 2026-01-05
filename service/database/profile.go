@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 )
 
 func (db *appdbimpl) UserExists(username string) (bool, error) {
@@ -36,39 +37,51 @@ func (db *appdbimpl) UpdateUsername(oldUsername, newUsername string) error {
 }
 
 func (db *appdbimpl) AddProfilePhoto(username string, photoData []byte) error {
-	//1. uzytkownik istnieje w bazie danych
-	//2. wstaw zdjecie do zdjec
-	//3. wez id zdjecia
-	//4. podepnij ip do profilu
 	exist, err := db.UserExists(username)
 	if err != nil {
-		return errors.New("Database error")
+		return fmt.Errorf("Database error: %w", err)
 	}
 	if !exist {
 		return errors.New("User does not exist")
 	}
-	res, err := db.c.Exec("INSERT INTO Users_photos(photo_data) VALUES(?)", photoData)
 
+	tx, err := db.c.Begin()
 	if err != nil {
-		return errors.New("Database error")
+		return fmt.Errorf("Failed to start transaction: %w", err)
 	}
-	new_photo_id, _ := res.LastInsertId()
+	defer tx.Rollback() // rollback
 
-	//sprawdz czy uzytkownik ma zdjecie
-	//A jesli ma to wywal tamto z bazy, dopisz mu ID nowego
-	//B jeśli nie to wpisz mu ID nowego
-	var old_photo_id sql.NullInt64
-	err = db.c.QueryRow("SELECT photo_id FROM users WHERE username=?)", username).Scan(&old_photo_id)
+	// Wstaw nowy obraz
+	res, err := tx.Exec("INSERT INTO Users_photos(photo_data) VALUES(?)", photoData)
 	if err != nil {
-		return errors.New("Database error")
-	}
-	if old_photo_id.Valid {
-		// update starego zdjecia
-		_, err = db.c.Exec("DELETE FROM Users_photos WHERE photo_id=?", old_photo_id.Int64)
-		///error do przemyslenia co z nim zrobic
+		return fmt.Errorf("Failed to insert photo: %w", err)
 	}
 
-	_, err = db.c.Exec("Update Users SET photo_id=? where username=?", new_photo_id, username) //zapisz nowe id_zdjecia dla usera
+	newPhotoID, err := res.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("Failed to get new photo ID: %w", err)
+	}
 
-	return nil
+	//stare photo_id
+	var oldPhotoID sql.NullInt64
+	err = tx.QueryRow("SELECT photo_id FROM users WHERE username=?", username).Scan(&oldPhotoID)
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("Failed to query old photo_id: %w", err)
+	}
+
+	// Usuń stare zdjęcie
+	if oldPhotoID.Valid {
+		_, err = tx.Exec("DELETE FROM Users_photos WHERE photo_id=?", oldPhotoID.Int64)
+		if err != nil {
+			return fmt.Errorf("Failed to delete old photo: %w", err)
+		}
+	}
+
+	//se new photo id in user
+	_, err = tx.Exec("UPDATE Users SET photo_id=? WHERE username=?", newPhotoID, username)
+	if err != nil {
+		return fmt.Errorf("Failed to update user: %w", err)
+	}
+
+	return tx.Commit() // jeśli wszystko OK
 }

@@ -16,5 +16,15 @@ func (rt *_router) Handler() http.Handler {
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)
 
+	//test
+	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// 	data, err := rt.readFileFromRequest(r)
+	// 	if err != nil {
+	// 		http.Error(w, err.Error(), http.StatusBadRequest)
+	// 		return
+	// 	}
+	// 	w.WriteHeader(http.StatusOK)
+	// 	w.Write(data)
+	// })
 	return rt.router
 }
