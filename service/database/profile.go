@@ -85,3 +85,16 @@ func (db *appdbimpl) AddProfilePhoto(username string, photoData []byte) error {
 
 	return tx.Commit() // jeśli wszystko OK
 }
+
+func (db *appdbimpl) GetProfilePhoto(username string) ([]byte, error) {
+	var photoData []byte
+	err := db.c.QueryRow(`
+		SELECT up.photo_data
+		FROM Users u
+		JOIN Users_photos up ON u.photo_id = up.photo_id
+		WHERE u.username = ?`, username).Scan(&photoData)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get profile photo: %w", err)
+	}
+	return photoData, nil
+}

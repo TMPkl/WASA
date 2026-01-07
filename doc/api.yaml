@@ -565,6 +565,8 @@ components:
       type: object
       required:
         - content
+        - conversationId
+        - senderUsername
       properties:
         content:
           type: string
@@ -579,6 +581,12 @@ components:
         respondedToMessageId:
           type: string
           description: ID of the message being responded to
+        conversationId:
+          type: string
+          example: conv_12345
+        senderUsername:
+          type: string
+          example: Karol
     MessageEmoji:
       type: object
       required:
