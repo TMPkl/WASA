@@ -12,12 +12,11 @@ import (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	conversation_id INTEGER NOT NULL,
 	sender_username TEXT NOT NULL,
-	content
-	 TEXT,
+	content TEXT,
 	timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 	attachment BLOB DEFAULT NULL,
 	reaction text DEFAULT NULL,
-	status TEXT CHECK( status IN ('sent','delivered','received','hidden') ), /// musze sprawdzic czy ja to 100% musze zrobic
+	status TEXT CHECK( status IN ('sent','delivered','received','hidden') )
 	CHECK (content IS NOT NULL OR attachment IS NOT NULL)
 */
 
@@ -64,4 +63,28 @@ func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap atta
 	}
 	message.ID = resultID
 	return message, nil
+}
+
+func (db *appdbimpl) DoesUsersOwnConversation(unA string, unB string) (bool, error) {
+	/*
+		CREATE TABLE IF NOT EXISTS Private_conversations_memberships (
+			conversation_id INTEGER NOT NULL,
+			member_username TEXT NOT NULL,
+			PRIMARY KEY (conversation_id, member_username));
+	*/
+	var exists bool
+	err := db.c.QueryRow(`
+	SELECT EXISTS(
+		SELECT 1
+		FROM Private_conversations_memberships pcm1
+		JOIN Private_conversations_memberships pcm2
+		  ON pcm1.conversation_id = pcm2.conversation_id
+		WHERE pcm1.member_username = ? AND pcm2.member_username = ?
+	)`, unA, unB).Scan(&exists)
+
+	if err != nil {
+		return false, fmt.Errorf("Database error: %w", err)
+	}
+
+	return exists, nil
 }
