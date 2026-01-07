@@ -6,18 +6,16 @@ import (
 
 // Handler returns an instance of httprouter.Router that handle APIs registered here
 func (rt *_router) Handler() http.Handler {
-	// Test endpoint
-	//rt.router.GET("/test", rt.checkUser)
 
 	// Profile endpoints
 	rt.router.POST("/login", rt.login)
 	rt.router.PATCH("/me/name", rt.UpdateMyUsername)
+	rt.router.POST("/me/photo", rt.SetProfilePhoto)
+
+	//Messages endpoints
 
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)
-
-	//setmyprofilephoto czy jakos tak endpoint
-	rt.router.POST("/me/photo", rt.SetProfilePhoto)
 
 	//test
 	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
