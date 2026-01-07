@@ -32,13 +32,13 @@ type Message struct {
 	Status         string
 }
 
-func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap attachments.AttachmentsPack, ConvID uint) error {
+func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap attachments.AttachmentsPack, ConvID uint) (Message, error) {
 	exist, err := db.UserExists(username)
 	if err != nil {
-		return fmt.Errorf("Database error: %w", err)
+		return Message{}, fmt.Errorf("Database error: %w", err)
 	}
 	if !exist {
-		return errors.New("User does not exist")
+		return Message{}, errors.New("User does not exist")
 	}
 	message := Message{
 		SenderUsername: username,
@@ -49,14 +49,19 @@ func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap atta
 	}
 	attachmentsData, err := ap.ConvertToGOB()
 	if err != nil {
-		return fmt.Errorf("Failed to convert attachments to GOB: %w", err)
+		return Message{}, fmt.Errorf("Failed to convert attachments to GOB: %w", err)
 	}
 	message.Attachment = attachmentsData
 
-	_, err = db.c.Exec("INSERT INTO Messages (conversation_id, sender_username, content, timestamp, attachment, status) VALUES (?, ?, ?, ?, ?, ?)",
+	res, err := db.c.Exec("INSERT INTO Messages (conversation_id, sender_username, content, timestamp, attachment, status) VALUES (?, ?, ?, ?, ?, ?)",
 		message.ConversationID, message.SenderUsername, message.Content, message.Timestamp, message.Attachment, message.Status)
 	if err != nil {
-		return fmt.Errorf("Failed to save message: %w", err)
+		return Message{}, fmt.Errorf("Failed to save message: %w", err)
 	}
-	return nil
+	resultID, err := res.LastInsertId()
+	if err != nil {
+		return Message{}, fmt.Errorf("Failed to retrieve last insert ID: %w", err)
+	}
+	message.ID = resultID
+	return message, nil
 }
