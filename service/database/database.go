@@ -46,6 +46,8 @@ type AppDatabase interface {
 	AddNewUser(username string) error
 
 	UpdateUsername(oldUsername, newUsername string) error
+
+	AddProfilePhoto(username string, photoData []byte) error
 }
 
 type appdbimpl struct {

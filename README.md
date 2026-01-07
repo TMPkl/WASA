@@ -35,3 +35,9 @@ The backend exposes the API endpoints defined in the OpenAPI specification and h
 According to the Go ideology (as far as I get it), the methods responsible for handling API requests are located in the `service/api` directory, while the database interactions are handled in the `service/database` directory. This part of the code is implemented using interfaces to allow for easy swapping of database implementations if needed.
 
 According to the course requirements, I use bearer tokens for user authentication, which are generated using the `github.com/golang-jwt/jwt/v5` package. 
+
+napisac jaki jestem super i ze robie to nawet na tranzakcjach (czasami jak trzeba)
+
+napisac ze na moje male potrzeby zapisuje zdjecia w bazie jako bloby ale wiem ze to zle i w realnych projektach sie tak nie robi
+
+napisac ze obrabiam zdjecia tak aby byly zapisywane jako kwadraty 200x200px latwe do odczytu i wyslania potel do frontu i ze uzywam do tego biblioteki imaging

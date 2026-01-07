@@ -16,6 +16,9 @@ func (rt *_router) Handler() http.Handler {
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)
 
+	//setmyprofilephoto czy jakos tak endpoint
+	rt.router.POST("/me/photo", rt.SetProfilePhoto)
+
 	//test
 	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// 	data, err := rt.readFileFromRequest(r)

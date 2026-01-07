@@ -148,7 +148,6 @@ func (rt *_router) UpdateMyUsername(w http.ResponseWriter, r *http.Request, ps h
 }
 
 // ###############SetProfilePhoto######################
-
 func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
 	r.ParseMultipartForm(10 << 10) // limit upload size to 5MB
 
@@ -197,5 +196,53 @@ func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
 }
 
 func (rt *_router) SetProfilePhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// To be implemented
+	//sprawdz uprawnienia
+	//odbierz zdjecie
+	//wysli do MakePictureFromRequest
+	//zapisz w DB
+	//pusty request wiec zwroc tylko staus
+	rt.baseLogger.Printf("SetProfilePhoto endpoint called")
+
+	err := r.ParseMultipartForm(10 << 20) // 10 MB
+	if err != nil {
+		rt.baseLogger.Printf("Error parsing multipart form")
+		rt.baseLogger.Printf(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	uname := r.FormValue("username")
+	if uname == "" {
+		rt.baseLogger.Printf("Username is required")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	authorised, err := rt.Authorise(w, r, uname)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !authorised {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	photoData, err := rt.MakePictureFromRequest(r)
+	if err != nil {
+		rt.baseLogger.Printf(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	err = rt.db.AddProfilePhoto(uname, photoData)
+	if err != nil {
+		rt.baseLogger.Printf(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
