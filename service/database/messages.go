@@ -133,3 +133,27 @@ func (db *appdbimpl) CreatePrivateConversation(username1 string, username2 strin
 
 	return uint(convID), nil
 }
+func (db *appdbimpl) DeleteMessage(messageID int64) error {
+	_, err := db.c.Exec("DELETE FROM Messages WHERE id = ?", messageID)
+	if err != nil {
+		return fmt.Errorf("Failed to delete message: %w", err)
+	}
+	return nil
+}
+func (db *appdbimpl) MessageOwner(messageID int64) (string, error) {
+	var ownerUsername string
+	err := db.c.QueryRow("SELECT sender_username FROM Messages WHERE id = ?", messageID).Scan(&ownerUsername)
+	if err != nil {
+		return "", fmt.Errorf("Failed bla bla bla cos tam cos : %w", err)
+	}
+	return ownerUsername, nil
+}
+func (db *appdbimpl) GetMessageByID(messageID int64) (Message, error) {
+	var message Message
+	err := db.c.QueryRow("SELECT id, conversation_id, sender_username, content, timestamp, attachment, reaction, status FROM Messages WHERE id = ?", messageID).
+		Scan(&message.ID, &message.ConversationID, &message.SenderUsername, &message.Content, &message.Timestamp, &message.Attachment, &message.Reaction, &message.Status)
+	if err != nil {
+		return Message{}, fmt.Errorf("Failed to bla bla bla fiu fiu fiu: %w", err)
+	}
+	return message, nil
+}
