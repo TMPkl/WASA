@@ -114,6 +114,7 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		"id":        fmt.Sprintf("%d", message.ID),
 		"senderId":  message.SenderUsername,
 		"content":   message.Content,
+		"conversationId": fmt.Sprintf("%d", convID),
 		"timestamp": message.Timestamp.Format("2022-01-02T15:04:05Z07:00"),
 	}
 
@@ -173,4 +174,80 @@ func (rt *_router) DeleteMessage(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type ForwardMessageRequest struct {
+	AddressingConversationID uint   `json:"addressingConversationID"`
+	Username                 string `json:"username"`
+}
+
+func (rt *_router) ForwardMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	//sprawdz autentykacje
+	//sprawdz czy uzytkownik jest w konwersacji
+	//zapisz wiadomosc
+	//przekaz wiadmosc z zmienionymi wartosciami
+	var rqst ForwardMessageRequest
+	err := json.NewDecoder(r.Body).Decode(&rqst)
+	if err != nil {
+		rt.baseLogger.Printf("Error decoding message request: %s", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	authorised, err := rt.Authorise(w, r, rqst.Username)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !authorised {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	inConv, err := rt.db.UserInConversation(rqst.Username, rqst.AddressingConversationID)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to wzium wzium: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !inConv {
+		rt.baseLogger.Printf("User %s is not in conversation %s", rqst.Username, rqst.AddressingConversationID)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	mesgID := ps.ByName("messageId")
+	forwardedMessage, err := rt.db.GetMessageByID(mesgID)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to get message: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if forwardedMessage == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	var NewMessage SendMessageRequest
+	NewMessage.Content = forwardedMessage.Content
+	NewMessage.ConversationID = int(rqst.AddressingConversationID)
+	apPtr, err := attachments.DecodeFromGOB(forwardedMessage.Attachment)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to decode attachments: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if apPtr != nil {
+		NewMessage.Attachmemnts = *apPtr
+	}
+	NewMessage.SenderUsername = rqst.Username
+
+	_, err = rt.db.SaveMessage(NewMessage.SenderUsername, NewMessage.Content, NewMessage.Attachmemnts, uint(NewMessage.ConversationID))
+	if err != nil {
+		rt.baseLogger.Printf("Failed to save forwarded message: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }

@@ -55,6 +55,7 @@ type AppDatabase interface {
 	GetMessageByID(messageID string) (*Message, error)
 	DeleteMessage(messageID string) error
 	MessageOwner(messageID string) (string, error)
+	UserInConversation(username string, conversationID uint) (bool, error)
 }
 
 type appdbimpl struct {

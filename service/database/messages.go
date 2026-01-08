@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -156,4 +157,22 @@ func (db *appdbimpl) GetMessageByID(messageID string) (*Message, error) {
 		return nil, fmt.Errorf("Failed to bla bla bla fiu fiu fiu: %w", err)
 	}
 	return &message, nil
+}
+func (db *appdbimpl) UserInConversation(username string, conversationID uint) (bool, error) {
+	var exists int
+	err := db.c.QueryRow(`
+		SELECT 1
+		FROM Private_conversations_memberships
+		WHERE member_username = ? AND conversation_id = ?
+		LIMIT 1
+	`, username, conversationID).Scan(&exists)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("Database error: %w", err)
+	}
+
+	return true, nil
 }
