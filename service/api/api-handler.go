@@ -19,6 +19,7 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.POST("/messages/:messageId/forwards", rt.ForwardMessage)
 
 	rt.router.POST("/messages/:messageId/reactions", rt.ReactToMessage)
+	rt.router.DELETE("/messages/:messageId/reactions", rt.RemoveReactionFromMessage)
 
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)

@@ -67,7 +67,7 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	convID, err := rt.db.DoesUsersOwnConversation(rqst.SenderUsername, rqst.ReciverUsername)
 	if err != nil {
 		// Conversation doesn't exist, create new one
-		rt.baseLogger.Printf("Creating new conversation between %s and %s", rqst.SenderUsername, rqst.ReciverUsername)
+		//rt.baseLogger.Printf("Creating new conversation between %s and %s", rqst.SenderUsername, rqst.ReciverUsername)
 		convID, err = rt.db.CreatePrivateConversation(rqst.SenderUsername, rqst.ReciverUsername)
 		if err != nil {
 			rt.baseLogger.Printf("Failed to create conversation: %s", err.Error())
@@ -274,7 +274,6 @@ func atoi(s string) int {
 
 func (rt *_router) ReactToMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reactedToMessagID := ps.ByName("messageId")
-	_ = reactedToMessagID
 
 	var rqst ReactionRequest
 	err := json.NewDecoder(r.Body).Decode(&rqst) // decoder json
@@ -342,4 +341,62 @@ func (rt *_router) ReactToMessage(w http.ResponseWriter, r *http.Request, ps htt
 		rt.baseLogger.Printf("Failed to encode response: %s", err.Error())
 	}
 
+}
+
+type RemoveReactionRequest struct {
+	Username string
+}
+
+func (rt *_router) RemoveReactionFromMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	baseMessageID := ps.ByName("messageId")
+
+	var rqst RemoveReactionRequest
+
+	err := json.NewDecoder(r.Body).Decode(&rqst) // decoder json
+
+	if err != nil {
+		rt.baseLogger.Printf("Error decoding KSON: %s", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	authorised, err := rt.Authorise(w, r, rqst.Username)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !authorised {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	conversationID, _ := rt.db.ConversationIDfromMessageID(baseMessageID)
+	IsUserInConv, err := rt.db.UserInConversation(rqst.Username, conversationID)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to check if user is in conversation: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !IsUserInConv {
+		rt.baseLogger.Printf("User %s is not in conversation %d", rqst.Username, conversationID)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	reactionMessageID, err := rt.db.GetReactionIDByUsernameAndBaseMessageID(rqst.Username, atoi(baseMessageID))
+	if err != nil {
+		rt.baseLogger.Printf("Failed : %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = rt.db.DeleteMessage(fmt.Sprintf("%d", reactionMessageID))
+	if err != nil {
+		rt.baseLogger.Printf("Failed to delete reaction message: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

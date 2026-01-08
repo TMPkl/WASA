@@ -193,6 +193,7 @@ func (db *appdbimpl) ReactToMessage(reactedToMessagID int, reaction string, user
 	if !exist {
 		return 0, errors.New("User does not exist")
 	}
+	//dodaj sprawdzenie czy user juz nie zareagowal na ta wiadomosc TODO
 	/*
 		type Message struct {
 		ID             int64
@@ -220,4 +221,30 @@ func (db *appdbimpl) ReactToMessage(reactedToMessagID int, reaction string, user
 	}
 	return uint(message.ID), nil
 
+}
+func (db *appdbimpl) GetReactionsID(baseMessageID int) ([]int, bool) {
+	res, err := db.c.Query("Select r.id from Messages b join Messages r on b.id = r.reacted_to_message_id where b.id = ?", baseMessageID)
+	if err != nil {
+		return nil, false
+	}
+	defer res.Close()
+	var reactionsIDs []int
+	for res.Next() {
+		var reactionID int
+		err := res.Scan(&reactionID)
+		if err != nil {
+			return nil, false
+		}
+		reactionsIDs = append(reactionsIDs, reactionID)
+	}
+	return reactionsIDs, true
+}
+
+func (db *appdbimpl) GetReactionIDByUsernameAndBaseMessageID(username string, baseMessageID int) (int, error) {
+	var reactionMessageID int
+	err := db.c.QueryRow("Select r.id from Messages b join Messages r on b.id = r.reacted_to_message_id where b.id = ? and r.sender_username = ?", baseMessageID, username).Scan(&reactionMessageID)
+	if err != nil {
+		return 0, fmt.Errorf("Failed to get reaction message ID: %w", err)
+	}
+	return reactionMessageID, nil
 }

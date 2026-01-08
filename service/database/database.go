@@ -59,6 +59,8 @@ type AppDatabase interface {
 	ConversationIDfromMessageID(messageID string) (uint, error)
 
 	ReactToMessage(reactedToMessagID int, reaction string, username string, conversationID uint) (uint, error)
+	GetReactionIDByUsernameAndBaseMessageID(username string, baseMessageID int) (int, error)
+	GetReactionsID(baseMessageID int) ([]int, bool)
 }
 
 type appdbimpl struct {

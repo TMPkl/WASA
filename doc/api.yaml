@@ -198,6 +198,12 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/MessageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteReaction'
       responses:
         "204":
           description: Reaction removed
@@ -542,3 +548,14 @@ components:
           type: string
           description: Base64 encoded binary content
           format: byte
+    DeleteReaction:
+      type: object
+      description: Delete reaction payload
+      required: [username]
+      properties:
+        username:
+          type: string
+          description: Username of the user removing the reaction
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
