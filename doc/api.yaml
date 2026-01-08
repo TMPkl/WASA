@@ -432,6 +432,13 @@ components:
           type: string
           description: ISO timestamp
           format: date-time
+        attachments:
+          type: array
+          description: Optional message attachments
+          minItems: 0
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/Attachment'
 
     MessageCreate:
       type: object
@@ -450,6 +457,13 @@ components:
           minLength: 1
           maxLength: 500
           pattern: "^.*$"
+        attachments:
+          type: array
+          description: Optional message attachments
+          minItems: 0
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/Attachment'
 
     ForwardRequest:
       type: object
@@ -508,3 +522,19 @@ components:
           type: string
           description: Binary image file
           format: binary
+
+    Attachment:
+      type: object
+      description: Message attachment
+      required: [type, content]
+      properties:
+        type:
+          type: string
+          description: MIME type of attachment
+          minLength: 1
+          maxLength: 100
+          pattern: "^[a-zA-Z0-9/+-]+$"
+        content:
+          type: string
+          description: Base64 encoded binary content
+          format: byte
