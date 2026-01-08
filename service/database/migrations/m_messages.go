@@ -14,7 +14,7 @@ func create_messages(db *sql.DB) error {
 		content TEXT,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 		attachment BLOB DEFAULT NULL,
-		reaction text DEFAULT NULL,
+		reacted_to_message_id INTEGER DEFAULT NULL,
 		status TEXT CHECK( status IN ('sent','delivered','received','hidden') ), 
 		CHECK (content IS NOT NULL OR attachment IS NOT NULL)
 	);`

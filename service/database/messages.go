@@ -22,14 +22,14 @@ import (
 */
 
 type Message struct {
-	ID             int64
-	ConversationID uint
-	SenderUsername string
-	Content        string
-	Timestamp      time.Time
-	Attachment     []byte // GOB encoded AttachmentsPack
-	Reaction       string
-	Status         string
+	ID                    int64
+	ConversationID        uint
+	SenderUsername        string
+	Content               string
+	Timestamp             time.Time
+	Attachment            []byte // GOB encoded AttachmentsPack
+	Reacted_to_message_id int64
+	Status                string
 }
 
 func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap attachments.AttachmentsPack, ConvID uint) (Message, error) {
@@ -152,7 +152,7 @@ func (db *appdbimpl) MessageOwner(messageID string) (string, error) {
 func (db *appdbimpl) GetMessageByID(messageID string) (*Message, error) {
 	var message Message
 	err := db.c.QueryRow("SELECT id, conversation_id, sender_username, content, timestamp, attachment, COALESCE(reaction, ''), status FROM Messages WHERE id = ?", messageID).
-		Scan(&message.ID, &message.ConversationID, &message.SenderUsername, &message.Content, &message.Timestamp, &message.Attachment, &message.Reaction, &message.Status)
+		Scan(&message.ID, &message.ConversationID, &message.SenderUsername, &message.Content, &message.Timestamp, &message.Attachment, &message.Reacted_to_message_id, &message.Status)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to bla bla bla fiu fiu fiu: %w", err)
 	}
@@ -175,4 +175,49 @@ func (db *appdbimpl) UserInConversation(username string, conversationID uint) (b
 	}
 
 	return true, nil
+}
+func (db *appdbimpl) ConversationIDfromMessageID(messageID string) (uint, error) {
+	var convID uint
+	err := db.c.QueryRow("SELECT conversation_id FROM Messages WHERE id = ?", messageID).Scan(&convID)
+	if err != nil {
+		return 0, fmt.Errorf("Failed to get conversation ID from message ID: %w", err)
+	}
+	return convID, nil
+}
+
+func (db *appdbimpl) ReactToMessage(reactedToMessagID int, reaction string, username string, conversationID uint) (uint, error) {
+	exist, err := db.UserExists(username)
+	if err != nil {
+		return 0, fmt.Errorf("Database error: %w", err)
+	}
+	if !exist {
+		return 0, errors.New("User does not exist")
+	}
+	/*
+		type Message struct {
+		ID             int64
+		ConversationID uint
+		SenderUsername string
+		Content        string
+		Timestamp      time.Time
+		Attachment     []byte // GOB encoded AttachmentsPack
+		Reaction       string
+		Status         string
+	*/
+	message := Message{
+		SenderUsername:        username,
+		Content:               reaction,
+		Timestamp:             time.Now(),
+		Status:                "sent",
+		ConversationID:        conversationID,
+		Reacted_to_message_id: int64(reactedToMessagID),
+	}
+
+	_, err = db.c.Exec("INSERT INTO Messages (conversation_id, sender_username, content, timestamp, reacted_to_message_id, status) VALUES (?, ?, ?, ?, ?, ?)",
+		message.ConversationID, message.SenderUsername, message.Content, message.Timestamp, message.Reacted_to_message_id, message.Status)
+	if err != nil {
+		return 0, fmt.Errorf("Failed to save reaction message: %w", err)
+	}
+	return uint(message.ID), nil
+
 }

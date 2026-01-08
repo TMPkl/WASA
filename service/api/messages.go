@@ -5,18 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database/attachments"
 	"github.com/julienschmidt/httprouter"
 )
 
 type SendMessageRequest struct {
-	Content              string //`json:"content"`
-	RespondedToMessageID int    //`json:"respondedToMessageId"`
-	ConversationID       int    //`json:"conversationId"`/// trzeba tez ustalic jak wygladaje te id
-	SenderUsername       string //`json:"senderUsername"`
-	ReciverUsername      string //`json:"receiverUsername"`
-	Attachmemnts         attachments.AttachmentsPack
+	Content         string //`json:"content"`
+	ConversationID  int    //`json:"conversationId"`/// trzeba tez ustalic jak wygladaje te id
+	SenderUsername  string //`json:"senderUsername"`
+	ReciverUsername string //`json:"receiverUsername"`
+	Attachmemnts    attachments.AttachmentsPack
 }
 
 func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -111,11 +111,11 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	w.WriteHeader(http.StatusCreated)
 
 	response := map[string]interface{}{
-		"id":        fmt.Sprintf("%d", message.ID),
-		"senderId":  message.SenderUsername,
-		"content":   message.Content,
+		"id":             fmt.Sprintf("%d", message.ID),
+		"senderId":       message.SenderUsername,
+		"content":        message.Content,
 		"conversationId": fmt.Sprintf("%d", convID),
-		"timestamp": message.Timestamp.Format("2022-01-02T15:04:05Z07:00"),
+		"timestamp":      message.Timestamp.Format("2022-01-02T15:04:05Z07:00"),
 	}
 
 	err = json.NewEncoder(w).Encode(response)
@@ -250,4 +250,96 @@ func (rt *_router) ForwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+/*type SendMessageRequest struct {
+	Content              string //`json:"content"`
+	RespondedToMessageID int    //`json:"respondedToMessageId"`
+	ConversationID       int    //`json:"conversationId"`/// trzeba tez ustalic jak wygladaje te id
+	SenderUsername       string //`json:"senderUsername"`
+	ReciverUsername      string //`json:"receiverUsername"`
+	Attachmemnts         attachments.AttachmentsPack
+}*/
+
+type ReactionRequest struct {
+	Emoji    string `json:"emoji"`
+	Username string `json:"username"`
+}
+
+func atoi(s string) int {
+	var n int
+	fmt.Sscanf(s, "%d", &n)
+	return n
+}
+
+func (rt *_router) ReactToMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	reactedToMessagID := ps.ByName("messageId")
+	_ = reactedToMessagID
+
+	var rqst ReactionRequest
+	err := json.NewDecoder(r.Body).Decode(&rqst) // decoder json
+	if err != nil {
+		rt.baseLogger.Printf("Error decoding KSON: %s", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	authorised, err := rt.Authorise(w, r, rqst.Username)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !authorised {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	//sprawdz czy uzytkownik jest wkonwersacji z wiadomscia
+	//sprawdz czy wiadomosc istnieje
+	//zapisz reakcje
+	ConversationIDfromRQ, err := rt.db.ConversationIDfromMessageID(reactedToMessagID)
+	_ = ConversationIDfromRQ // test
+
+	if err != nil {
+		rt.baseLogger.Printf("Failed to get conversation ID from message ID: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	IsUserInConv, err := rt.db.UserInConversation(rqst.Username, ConversationIDfromRQ)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to check if user is in conversation: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !IsUserInConv {
+		rt.baseLogger.Printf("User %s is not in conversation %d", rqst.Username, ConversationIDfromRQ)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	newMessageID, err := rt.db.ReactToMessage(atoi(reactedToMessagID), rqst.Emoji, rqst.Username, ConversationIDfromRQ)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to save reaction message: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	response := map[string]interface{}{
+		"id":             fmt.Sprintf("%d", newMessageID),
+		"senderId":       rqst.Username,
+		"content":        rqst.Emoji,
+		"conversationId": fmt.Sprintf("%d", ConversationIDfromRQ),
+		"timestamp":      time.Now(),
+	}
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to encode response: %s", err.Error())
+	}
+
 }

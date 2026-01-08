@@ -474,7 +474,7 @@ components:
     Reaction:
       type: object
       description: Emoji reaction
-      required: [emoji]
+      required: [emoji, username]
       properties:
         emoji:
           type: string
@@ -482,6 +482,12 @@ components:
           minLength: 1
           maxLength: 4
           pattern: "^.*$"
+        username:
+          type: string
+          description: Username of the user reacting
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
 
     GroupMember:
       type: object
