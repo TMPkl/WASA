@@ -1,597 +1,510 @@
 openapi: 3.0.3
 info:
-  title: Simplified Login API
-  description: >
-    This OpenAPI document describes a WASAtext project.
+  title: WASAtext API
+  description: REST API specification for WASAtext messaging system.
   version: "2.0.1"
 
 tags:
   - name: profile
-    description: User profile
+    description: Operations related to user profile
+  - name: conversations
+    description: Conversation retrieval
   - name: messages
-    description: Messages
+    description: Message operations
   - name: groups
     description: Group management
 
 paths:
+
   /login:
     post:
-      tags:
-        - profile
-      summary: Logs in the user
-      description: >
-        If the user does not exist, it is created and an identifier is returned.
-        If the user already exists, the existing identifier is returned.
+      tags: [profile]
+      summary: User login
+      description: Logs in a user or creates it if it does not exist.
       operationId: doLogin
       requestBody:
         required: true
-        description: User login data
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - username
-              properties:
-                username:
-                  type: string
-                  minLength: 3
-                  maxLength: 16
-                  pattern: "^.*$"
-                  example: Maria
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         "200":
-          description: User login successful or return UserID 
+          description: Successful login
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - token
-                properties:
-                  token:
-                    type: string
-                    example: abcdef012345
-        "400":
-          description: Invalid input data
+                $ref: '#/components/schemas/LoginResponse'
 
   /me/username:
     patch:
-      tags:
-        - profile
-      summary: Updates my username
+      tags: [profile]
+      summary: Change username
       description: Updates the username of the authenticated user.
       operationId: setMyUserName
-      security:
-        - bearerAuth: []
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
-        description: New username
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - username
-                - new-username
-              properties:
-                username:
-                  type: string
-                  minLength: 5
-                  maxLength: 16
-                  example: TMPkl2137
-                new-username:
-                  type: string
-                  minLength: 5
-                  maxLength: 16
-                  example: TMPkl2137
+              $ref: '#/components/schemas/UsernameUpdate'
       responses:
         "200":
-          description: Username successfully updated, new Bearer token returned
-          body:
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    token:
-                      type: string
-                      example: abcdef012345
-        "400":
-          description: Invalid request body
-        "401":
-          description: Unauthorized missing or invalid token
-  /conversations/me:
-    get:
-      tags: 
-        - messages
-      summary: Get all conversations
-      description: Retrieves the list of conversations for loggeg in user, last text snippets, timestamps and text status for all friends
-      operationId: getMyConversations
-      security: 
-        - bearerAuth: []
-      responses:
-        '200': 
-          description: conversations data, request successful proccesed
+          description: Username updated
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Conversation'
-        '401':
-          description: Unauthorized request, JWT key is wrong
-  /conversations/with/{userId}:
-    get: 
-      tags: 
-        - messages
-      summary: Get conversation with single User
-      operationId: getConversation
-      security: 
-        - bearerAuth: []
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          description: user ID with whom the conversation is
-          schema:
-            type: string
-      responses:
-        '200': 
-          description: conversations data, request successful proccesed
-          content:
-            application/json:
-              schema:
-                  $ref: '#/components/schemas/Conversation'
-        '401':
-          description: Unauthorized request, JWT key is wrong
-        '404':
-          description: Convers with UserID does not exist
+                $ref: '#/components/schemas/LoginResponse'
 
-  /conversations/with/{userId}/sendMessage:
+  /me/photo:
     post:
-      tags:
-        - messages
-      summary: Send a message
-      description: Send a single message to a user
-      operationId: sendMessage
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MessageCreate'
-      responses:
-          "201":
-            description: Message successful send
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/Message'
-          "400":
-            description: Invalid input data
-          "401":
-            description: Unauthorized (missing or invalid token)
-  /conversations/{messageId}/forward:
-    post:
-      tags:
-        - messages
-      summary: forward a message
-      description: forward a single message to a user
-      operationId: forwardMessage
-      security:
-        - bearerAuth: []
-      parameters:
-          - name: messageId
-            in: path
-            required: true
-            schema:
-              type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MessageCreate'
-      responses:
-          "201":
-            description: Message successful forwarded
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/Message'
-          "400":
-            description: Invalid input data
-          "401":
-            description: Unauthorized (missing or invalid token)
-          "404":
-            description: Original message or receiver not found
-  /conversations/{messageId}/comment:
-    post:
-      tags:
-        - messages
-      summary: comment a message
-      description: comment a single message using emoji
-      operationId: commentMessage
-      security:
-        - bearerAuth: []
-      parameters:
-          - name: messageId
-            in: path
-            required: true
-            schema:
-              type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MessageEmoji'
-      responses:
-          "201":
-            description: Message successful commented
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/MessageEmoji'
-          "400":
-            description: Invalid input data
-          "401":
-            description: Unauthorized (missing or invalid token)
-          "404":
-            description: Original message not found
-  /conversations/{messageId}/uncomment:
-    delete:
-      tags:
-        - messages
-      summary: uncomment a message
-      description: remove comment from a single message
-      operationId: uncommentMessage
-      security:
-        - bearerAuth: []
-      parameters:
-          - name: messageId
-            in: path
-            required: true
-            schema:
-              type: string
-      responses:
-          "204":
-            description: Message successful uncommented
-          "401":
-            description: Unauthorized (missing or invalid token)
-          "404":
-            description: Original message or comment not found
-  /conversations/{messageId}/delete:
-    delete:
-      tags:
-        - messages
-      summary: delete a message
-      description: delete a single message
-      operationId: deleteMessage
-      security:
-        - bearerAuth: []
-      parameters:
-          - name: messageId
-            in: path
-            required: true
-            schema:
-              type: string
-      responses:
-          "204":
-            description: Message successful deleted
-          "401":
-            description: Unauthorized (missing or invalid token)
-          "404":
-            description: Original message not found
-  /groups/create:
-    post:
-      tags:
-        - groups
-      summary: Create a group
-      description: Create a new group with specified members
-      operationId: createGroup
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - groupName
-              properties:
-                groupName:
-                  type: string
-                memberIds:
-                  type: array
-                  items:
-                    type: string
-            example:
-              groupName: "Friends Group"
-              memberIds:
-                - user_1
-                - user_2
-                - user_3
-
-      responses:
-          "201":
-            description: Group successfully created
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    groupId:
-                      type: string
-          "400":
-            description: Invalid input data
-          "401":
-            description: Unauthorized (missing or invalid token)
-  /groups/{groupId}/addMember:
-    post:
-      tags:
-        - groups
-      summary: Add member to a group
-      description: Add a new member to an existing group
-      operationId: addToGroup
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - memberId
-              properties:
-                memberId:
-                  type: string
-      responses:
-          "200":
-            description: Member successfully added to group
-          "400":
-            description: Invalid input data
-          "401":
-            description: Unauthorized (missing or invalid token)
-          "404":
-            description: Group not found
-  /groups/{groupId}/leave:
-    post:
-      tags:
-        - groups
-      summary: Leave a group
-      description: Remove the authenticated user from the specified group
-      operationId: leaveGroup
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-          "200":
-            description: Successfully left the group
-          "401":
-            description: Unauthorized (missing or invalid token)
-          "404":
-            description: Group not found
-  /groups/{groupId}/setName:
-    patch:
-      tags:
-        - groups
-      summary: Set group name
-      description: Update the name of the specified group
-      operationId: setGroupName
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - groupName
-              properties:
-                groupName:
-                  type: string
-                  example: New Group Name
-      responses:
-          "200":
-            description: Group name successfully updated
-          "400":
-            description: Invalid input data
-          "401":
-            description: Unauthorized (missing or invalid token)
-          "404":
-            description: Group not found
-/me/photo:
-  post:
-    tags:
-      - profile
-    summary: Upload or update my profile photo
-    description: Uploads or updates the profile photo of the authenticated user.
-    operationId: setMyPhoto
-    security:
-      - bearerAuth: []
-    requestBody:
-      required: true
-      content:
-        multipart/form-data:
-          schema:
-            type: object
-            required:
-              - photo
-              - username
-            properties:
-              photo:
-                type: string
-                format: binary
-              username:
-                type: string
-      responses:
-        "200":
-          description: Profile photo successfully uploaded or updated
-        "400":
-          description: Invalid photo format or size
-        "401":
-          description: Unauthorized (missing or invalid token)
-  /groups/{groupId}/photo:
-    post:
-      tags:
-        - groups
-      summary: Upload or update group photo
-      description: Uploads or updates the photo of the specified group.
-      operationId: setGroupPhoto
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: string
+      tags: [profile]
+      summary: Update profile photo
+      description: Uploads or replaces the user profile photo.
+      operationId: setMyPhoto
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
-              type: object
-              properties:
-                photo:
-                  type: string
-                  format: binary
+              $ref: '#/components/schemas/PhotoUpload'
       responses:
         "200":
-          description: Group photo successfully uploaded or updated
-        "400":
-          description: Invalid photo format or size
-        "401":
-          description: Unauthorized (missing or invalid token)
-        "404":
-          description: Group not found
+          description: Photo updated
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Empty response
+                properties: {}
 
+  /conversations:
+    get:
+      tags: [conversations]
+      summary: List conversations
+      description: Retrieves all conversations of the authenticated user.
+      operationId: getMyConversations
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                minItems: 0
+                maxItems: 1000
+                items:
+                  $ref: '#/components/schemas/Conversation'
 
-#--------------------- Schemas ----------------------#
-          
+  /conversations/{conversationId}:
+    get:
+      tags: [conversations]
+      summary: Get conversation
+      description: Retrieves a single conversation.
+      operationId: getConversation
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        "200":
+          description: Conversation data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /messages:
+    post:
+      tags: [messages]
+      summary: Send message
+      description: Sends a new message.
+      operationId: sendMessage
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  /messages/{messageId}:
+    delete:
+      tags: [messages]
+      summary: Delete message
+      description: Deletes a message.
+      operationId: deleteMessage
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        "204":
+          description: Message deleted
+
+  /messages/{messageId}/forwards:
+    post:
+      tags: [messages]
+      summary: Forward message
+      description: Forwards an existing message.
+      operationId: forwardMessage
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForwardRequest'
+      responses:
+        "201":
+          description: Message forwarded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  /messages/{messageId}/reactions:
+    post:
+      tags: [messages]
+      summary: Add reaction
+      description: Adds an emoji reaction to a message.
+      operationId: commentMessage
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reaction'
+      responses:
+        "201":
+          description: Reaction added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reaction'
+
+    delete:
+      tags: [messages]
+      summary: Remove reaction
+      description: Removes a reaction from a message.
+      operationId: uncommentMessage
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        "204":
+          description: Reaction removed
+
+  /groups/{groupId}/members:
+    post:
+      tags: [groups]
+      summary: Add group member
+      description: Adds a user to a group.
+      operationId: addToGroup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupMember'
+      responses:
+        "200":
+          description: Member added
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Empty response
+                properties: {}
+
+  /groups/{groupId}/members/me:
+    delete:
+      tags: [groups]
+      summary: Leave group
+      description: Removes the authenticated user from the group.
+      operationId: leaveGroup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        "204":
+          description: Left group
+
+  /groups/{groupId}/name:
+    patch:
+      tags: [groups]
+      summary: Rename group
+      description: Updates the group name.
+      operationId: setGroupName
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupName'
+      responses:
+        "200":
+          description: Group renamed
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Empty response
+                properties: {}
+
+  /groups/{groupId}/photo:
+    post:
+      tags: [groups]
+      summary: Update group photo
+      description: Uploads or replaces group photo.
+      operationId: setGroupPhoto
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhotoUpload'
+      responses:
+        "200":
+          description: Group photo updated
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Empty response
+                properties: {}
 
 components:
+
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    MessageId:
+      name: messageId
+      in: path
+      required: true
+      description: Unique message identifier
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: "^[a-zA-Z0-9_-]+$"
+
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      description: Unique conversation identifier
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: "^[a-zA-Z0-9_-]+$"
+
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      description: Unique group identifier
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: "^[a-zA-Z0-9_-]+$"
+
   schemas:
+
+    LoginRequest:
+      type: object
+      description: Login request payload
+      required: [username]
+      properties:
+        username:
+          type: string
+          description: User name
+          minLength: 3
+          maxLength: 16
+          pattern: "^[a-zA-Z0-9_]+$"
+
+    LoginResponse:
+      type: object
+      description: Login response
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: JWT authentication token
+          minLength: 10
+          maxLength: 512
+          pattern: "^[A-Za-z0-9._-]+$"
+
+    UsernameUpdate:
+      type: object
+      description: Username update payload
+      required: [newUsername]
+      properties:
+        newUsername:
+          type: string
+          description: New username
+          minLength: 3
+          maxLength: 16
+          pattern: "^[a-zA-Z0-9_]+$"
+
     Conversation:
       type: object
+      description: Conversation data
+      required: [id, participants, messages]
       properties:
         id:
           type: string
-          example: conv_12345
+          description: Conversation ID
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
         participants:
           type: array
+          description: Participants list
+          minItems: 1
+          maxItems: 100
           items:
             type: string
-          example:
-            - user_1
-            - user_2
+            minLength: 1
+            maxLength: 64
+            pattern: "^[a-zA-Z0-9_-]+$"
         messages:
           type: array
+          description: Messages list
+          minItems: 0
+          maxItems: 10000
           items:
             $ref: '#/components/schemas/Message'
-      example:
-        id: conv_12345
-        participants:
-          - user_1
-          - user_2
-        messages:
-          - id: msg_1
-            conversationId: conv_12345
-            senderId: user_1
-            content: "Ciao!"
-            timestamp: "2004-10-22T21:37:00Z"
-            status: sent
-            attachments: []
+
     Message:
       type: object
+      description: Message entity
+      required: [id, senderId, content, timestamp]
       properties:
         id:
           type: string
-        conversationId:
-          type: string
+          description: Message ID
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
         senderId:
           type: string
+          description: Sender identifier
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
         content:
           type: string
-        timestamp:
-          type: string
-          format: date-time
-        status:
-          type: string
-          enum:
-            - sent
-            - delivered
-            - read
-        attachments:
-          type: array
-          items:
-            type: string
-    MessageCreate:
-      type: object
-      required:
-        - content
-        - conversationId
-        - senderUsername
-      properties:
-        content:
-          type: string
-          example: Hello, how are you?
+          description: Message text
           minLength: 1
           maxLength: 500
-        attachments:
-          type: array
-          items:
-            type: string
-          description: attachment URLs
-        respondedToMessageId:
+          pattern: "^.*$"
+        timestamp:
           type: string
-          description: ID of the message being responded to
+          description: ISO timestamp
+          format: date-time
+
+    MessageCreate:
+      type: object
+      description: New message payload
+      required: [conversationId, content]
+      properties:
         conversationId:
           type: string
-          example: conv_12345
-        senderUsername:
+          description: Conversation identifier
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+        content:
           type: string
-          example: Karol
-    MessageEmoji:
+          description: Message text
+          minLength: 1
+          maxLength: 500
+          pattern: "^.*$"
+
+    ForwardRequest:
       type: object
-      required:
-        - emoji
+      description: Forward request
+      required: [conversationId]
+      properties:
+        conversationId:
+          type: string
+          description: Target conversation
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+
+    Reaction:
+      type: object
+      description: Emoji reaction
+      required: [emoji]
       properties:
         emoji:
           type: string
-          example: "<:"
+          description: Emoji character
+          minLength: 1
+          maxLength: 4
+          pattern: "^.*$"
+
+    GroupMember:
+      type: object
+      description: Group member payload
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          description: User identifier
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+
+    GroupName:
+      type: object
+      description: Group name payload
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Group name
+          minLength: 3
+          maxLength: 50
+          pattern: "^.*$"
+
+    PhotoUpload:
+      type: object
+      description: Photo upload payload
+      required: [photo]
+      properties:
+        photo:
+          type: string
+          description: Binary image file
+          format: binary

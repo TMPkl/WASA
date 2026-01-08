@@ -44,10 +44,10 @@ type AppDatabase interface {
 
 	UserExists(username string) (bool, error)
 	AddNewUser(username string) error
-
 	UpdateUsername(oldUsername, newUsername string) error
-
 	AddProfilePhoto(username string, photoData []byte) error
+
+	DoesUsersOwnConversation(unA string, unB string) (bool, error)
 }
 
 type appdbimpl struct {
