@@ -110,16 +110,67 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	// Send message details in response
 	response := map[string]interface{}{
 		"id":        fmt.Sprintf("%d", message.ID),
 		"senderId":  message.SenderUsername,
 		"content":   message.Content,
-		"timestamp": message.Timestamp.Format("2006-01-02T15:04:05Z07:00"),
+		"timestamp": message.Timestamp.Format("2022-01-02T15:04:05Z07:00"),
 	}
 
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		rt.baseLogger.Printf("Failed to encode response: %s", err.Error())
 	}
+}
+
+func (rt *_router) DeleteMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	/*
+	   doc:
+	   	/messages/{messageId}:
+	   		delete:
+	   		tags: [messages]
+	   		summary: Delete message
+	   		description: Deletes a message.
+	   		operationId: deleteMessage
+	   		security: [{ bearerAuth: [] }]
+	   		parameters:
+	   			- $ref: '#/components/parameters/MessageId'
+	   		responses:
+	   			"204":
+	   			description: Message deleted
+	*/
+	messageId := ps.ByName("messageId")
+	_ = messageId
+
+	msg, err := rt.db.GetMessageByID(messageId)
+
+	if err != nil {
+		rt.baseLogger.Printf("Failed to get message: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if msg == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	authorised, err := rt.Authorise(w, r, msg.SenderUsername)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !authorised {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	err = rt.db.DeleteMessage(messageId)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to delete message: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -146,6 +146,15 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/MessageId'
+        - name: username
+          in: query
+          required: true
+          description: Username of the user deleting the message
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 16
+            pattern: "^[a-zA-Z0-9_]+$"
       responses:
         "204":
           description: Message deleted

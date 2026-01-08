@@ -133,14 +133,14 @@ func (db *appdbimpl) CreatePrivateConversation(username1 string, username2 strin
 
 	return uint(convID), nil
 }
-func (db *appdbimpl) DeleteMessage(messageID int64) error {
+func (db *appdbimpl) DeleteMessage(messageID string) error {
 	_, err := db.c.Exec("DELETE FROM Messages WHERE id = ?", messageID)
 	if err != nil {
 		return fmt.Errorf("Failed to delete message: %w", err)
 	}
 	return nil
 }
-func (db *appdbimpl) MessageOwner(messageID int64) (string, error) {
+func (db *appdbimpl) MessageOwner(messageID string) (string, error) {
 	var ownerUsername string
 	err := db.c.QueryRow("SELECT sender_username FROM Messages WHERE id = ?", messageID).Scan(&ownerUsername)
 	if err != nil {
@@ -148,12 +148,12 @@ func (db *appdbimpl) MessageOwner(messageID int64) (string, error) {
 	}
 	return ownerUsername, nil
 }
-func (db *appdbimpl) GetMessageByID(messageID int64) (Message, error) {
+func (db *appdbimpl) GetMessageByID(messageID string) (*Message, error) {
 	var message Message
-	err := db.c.QueryRow("SELECT id, conversation_id, sender_username, content, timestamp, attachment, reaction, status FROM Messages WHERE id = ?", messageID).
+	err := db.c.QueryRow("SELECT id, conversation_id, sender_username, content, timestamp, attachment, COALESCE(reaction, ''), status FROM Messages WHERE id = ?", messageID).
 		Scan(&message.ID, &message.ConversationID, &message.SenderUsername, &message.Content, &message.Timestamp, &message.Attachment, &message.Reaction, &message.Status)
 	if err != nil {
-		return Message{}, fmt.Errorf("Failed to bla bla bla fiu fiu fiu: %w", err)
+		return nil, fmt.Errorf("Failed to bla bla bla fiu fiu fiu: %w", err)
 	}
-	return message, nil
+	return &message, nil
 }

@@ -14,6 +14,7 @@ func (rt *_router) Handler() http.Handler {
 
 	//Messages endpoints
 	rt.router.POST("/messages", rt.SendMessage)
+	rt.router.DELETE("/messages/:messageId", rt.DeleteMessage)
 
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)

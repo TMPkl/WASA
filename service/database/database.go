@@ -51,6 +51,10 @@ type AppDatabase interface {
 	DoesUsersOwnConversation(unA string, unB string) (uint, error)
 	CreatePrivateConversation(username1 string, username2 string) (uint, error)
 	SaveMessage(username string, MessageContent string, ap attachments.AttachmentsPack, ConvID uint) (Message, error)
+
+	GetMessageByID(messageID string) (*Message, error)
+	DeleteMessage(messageID string) error
+	MessageOwner(messageID string) (string, error)
 }
 
 type appdbimpl struct {
