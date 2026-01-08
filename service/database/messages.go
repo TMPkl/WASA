@@ -65,26 +65,71 @@ func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap atta
 	return message, nil
 }
 
-func (db *appdbimpl) DoesUsersOwnConversation(unA string, unB string) (bool, error) {
+func (db *appdbimpl) DoesUsersOwnConversation(unA string, unB string) (uint, error) {
 	/*
 		CREATE TABLE IF NOT EXISTS Private_conversations_memberships (
 			conversation_id INTEGER NOT NULL,
 			member_username TEXT NOT NULL,
 			PRIMARY KEY (conversation_id, member_username));
 	*/
-	var exists bool
+	var conversationID uint
 	err := db.c.QueryRow(`
-	SELECT EXISTS(
-		SELECT 1
+		SELECT pcm1.conversation_id
 		FROM Private_conversations_memberships pcm1
 		JOIN Private_conversations_memberships pcm2
 		  ON pcm1.conversation_id = pcm2.conversation_id
 		WHERE pcm1.member_username = ? AND pcm2.member_username = ?
-	)`, unA, unB).Scan(&exists)
+		LIMIT 1
+	`, unA, unB).Scan(&conversationID)
 
 	if err != nil {
-		return false, fmt.Errorf("Database error: %w", err)
+		return 0, fmt.Errorf("Conversation not found: %w", err)
 	}
 
-	return exists, nil
+	return conversationID, nil
+}
+
+func (db *appdbimpl) CreatePrivateConversation(username1 string, username2 string) (uint, error) {
+	//  Check if both users exist
+	exist1, err := db.UserExists(username1)
+	if err != nil {
+		return 0, fmt.Errorf("Database error: %w", err)
+	}
+	if !exist1 {
+		return 0, errors.New("User " + username1 + " does not exist")
+	}
+
+	exist2, err := db.UserExists(username2)
+	if err != nil {
+		return 0, fmt.Errorf("Database error: %w", err)
+	}
+	if !exist2 {
+		return 0, errors.New("User " + username2 + " does not exist")
+	}
+
+	// Create conversation
+	res, err := db.c.Exec("INSERT INTO Conversations (type, photo_id) VALUES (?, ?)", "private", nil)
+	if err != nil {
+		return 0, fmt.Errorf("Failed to create conversation: %w", err)
+	}
+
+	convID, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("Failed to retrieve conversation ID: %w", err)
+	}
+
+	// Add both users to the conversation
+	_, err = db.c.Exec("INSERT INTO Private_conversations_memberships (conversation_id, member_username) VALUES (?, ?)",
+		convID, username1)
+	if err != nil {
+		return 0, fmt.Errorf("Failed to add user1 to conversation: %w", err)
+	}
+
+	_, err = db.c.Exec("INSERT INTO Private_conversations_memberships (conversation_id, member_username) VALUES (?, ?)",
+		convID, username2)
+	if err != nil {
+		return 0, fmt.Errorf("Failed to add user2 to conversation: %w", err)
+	}
+
+	return uint(convID), nil
 }

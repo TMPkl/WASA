@@ -35,6 +35,7 @@ import (
 	"errors"
 	"fmt"
 
+	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database/attachments"
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database/migrations"
 )
 
@@ -47,7 +48,9 @@ type AppDatabase interface {
 	UpdateUsername(oldUsername, newUsername string) error
 	AddProfilePhoto(username string, photoData []byte) error
 
-	DoesUsersOwnConversation(unA string, unB string) (bool, error)
+	DoesUsersOwnConversation(unA string, unB string) (uint, error)
+	CreatePrivateConversation(username1 string, username2 string) (uint, error)
+	SaveMessage(username string, MessageContent string, ap attachments.AttachmentsPack, ConvID uint) (Message, error)
 }
 
 type appdbimpl struct {

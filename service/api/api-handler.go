@@ -9,10 +9,11 @@ func (rt *_router) Handler() http.Handler {
 
 	// Profile endpoints
 	rt.router.POST("/login", rt.login)
-	rt.router.PATCH("/me/name", rt.UpdateMyUsername)
+	rt.router.PATCH("/me/username", rt.UpdateMyUsername)
 	rt.router.POST("/me/photo", rt.SetProfilePhoto)
 
 	//Messages endpoints
+	rt.router.POST("/messages", rt.SendMessage)
 
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)

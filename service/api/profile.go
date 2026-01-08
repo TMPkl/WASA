@@ -201,7 +201,8 @@ func (rt *_router) SetProfilePhoto(w http.ResponseWriter, r *http.Request, ps ht
 	//wysli do MakePictureFromRequest
 	//zapisz w DB
 	//pusty request wiec zwroc tylko staus
-	rt.baseLogger.Printf("SetProfilePhoto endpoint called")
+
+	//rt.baseLogger.Printf("SetProfilePhoto endpoint called")
 
 	err := r.ParseMultipartForm(10 << 20) // 10 MB
 	if err != nil {
