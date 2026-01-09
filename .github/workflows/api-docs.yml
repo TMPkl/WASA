@@ -22,12 +22,9 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm ci
-
       - name: Build API docs
         run: |
-          npx redocly build-docs doc/api.yaml \
+          npx @redocly/cli build-docs doc/api.yaml \
             --output public/index.html
 
       - name: Upload Pages artifact
