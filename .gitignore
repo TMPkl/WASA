@@ -21,3 +21,7 @@ schema.sql
 
 notka_z_komendami_ktore_wiem_ze_zapomne.txt
 /tests/
+/public 
+node_modules/
+package-lock.json
+package.json

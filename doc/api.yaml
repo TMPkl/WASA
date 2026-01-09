@@ -290,6 +290,33 @@ paths:
         "204":
           description: Group photo updated
 
+  /groups:
+    post:
+      tags: [groups]
+      summary: Create group
+      description: Creates a new group and its conversation.
+      operationId: createGroup
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupCreate'
+      responses:
+        "201":
+          description: Group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupCreateResponse'
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Server error
+
 components:
 
   securitySchemes:
@@ -559,3 +586,31 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+
+    GroupCreate:
+      type: object
+      description: Create group payload
+      required: [group_name, username]
+      properties:
+        group_name:
+          type: string
+          description: Name of the group
+          minLength: 1
+          maxLength: 100
+          pattern: "^.*$"
+        username:
+          type: string
+          description: Creator's username (for authorization)
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+
+    GroupCreateResponse:
+      type: object
+      description: Response after creating a group
+      required: [group_id]
+      properties:
+        group_id:
+          type: integer
+          format: int64
+          description: ID of the created group
