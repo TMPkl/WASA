@@ -61,6 +61,16 @@ type AppDatabase interface {
 	ReactToMessage(reactedToMessagID int, reaction string, username string, conversationID uint) (uint, error)
 	GetReactionIDByUsernameAndBaseMessageID(username string, baseMessageID int) (int, error)
 	GetReactionsID(baseMessageID int) ([]int, bool)
+
+	// GROPS DB
+	CreateGroup(groupName string, members []string) (uint, error)
+	GetGroupMembers(groupID uint) ([]string, error)
+	RenameGroup(groupID uint, newName string) error
+	AddMemberToGroup(groupID uint, username string) error
+	RemoveMemberFromGroup(groupID uint, username string) error
+	IsUserInGroup(groupID uint, username string) (bool, error)
+	SaveGroupMessage(username string, groupID uint, messageContent string, ap attachments.AttachmentsPack) (Message, error)
+	UpdateGroupPhoto(groupID uint, photoData []byte) error
 }
 
 type appdbimpl struct {
