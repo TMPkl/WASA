@@ -24,6 +24,10 @@ func (rt *_router) Handler() http.Handler {
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)
 
+	// Groups endpoints
+	rt.router.POST("/groups", rt.CreateGroup)
+	rt.router.POST("/groups/:groupId/members", rt.AddGroupMember)
+
 	//test
 	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// 	data, err := rt.readFileFromRequest(r)

@@ -63,7 +63,7 @@ type AppDatabase interface {
 	GetReactionsID(baseMessageID int) ([]int, bool)
 
 	// GROPS DB
-	CreateGroup(groupName string, members []string) (uint, error)
+	CreateGroup(groupName string, firstMember string) (uint, error)
 	GetGroupMembers(groupID uint) ([]string, error)
 	RenameGroup(groupID uint, newName string) error
 	AddMemberToGroup(groupID uint, username string) error

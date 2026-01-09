@@ -10,11 +10,7 @@ func create_conversations(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS Conversations (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		type TEXT CHECK( type IN ('private','group') ) NOT NULL,
-		photo_id INTEGER,
-			CHECK (
-			(type = 'group' and photo_id IS NOT NULL)
-			OR
-			(type = 'private' and photo_id IS NULL))
+		photo_id INTEGER
 	);
 	CREATE TABLE IF NOT EXISTS Private_conversations_memberships (
 		conversation_id INTEGER NOT NULL,

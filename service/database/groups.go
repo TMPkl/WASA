@@ -6,7 +6,7 @@ import (
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database/attachments"
 )
 
-func (db *appdbimpl) CreateGroup(groupName string, members []string) (uint, error) {
+func (db *appdbimpl) CreateGroup(groupName string, firstMember string) (uint, error) {
 	// Start a transaction
 	tx, err := db.c.Begin()
 	if err != nil {
@@ -39,13 +39,10 @@ func (db *appdbimpl) CreateGroup(groupName string, members []string) (uint, erro
 	}
 
 	//3  adding members
-	for _, member := range members {
-		_, err = tx.Exec("INSERT INTO Groups_memberships (group_id, member_username) VALUES (?, ?)", groupID, member)
-		if err != nil {
-			return 0, fmt.Errorf("failed to add member %s to group: %w", member, err)
-		}
+	_, err = tx.Exec("INSERT INTO Groups_memberships (group_id, member_username) VALUES (?, ?)", groupID, firstMember)
+	if err != nil {
+		return 0, fmt.Errorf("failed to add member %s to group: %w", firstMember, err)
 	}
-
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return 0, fmt.Errorf("failed to commit transaction: %w", err)
