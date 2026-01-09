@@ -19,7 +19,7 @@ The structure of the repository is imposed by the course requirements and is bas
 All API endpoints and schemas are defined in the *OpenAPI* specification.  
 For a convenient graphical representation of all resources, please open:
 
-[Graphical API Documentation](doc/api-docs.html) built using the [*Redoc CLI*](https://redocly.com/docs/cli)
+[Graphical API Documentation](https://tmpkl.github.io/WASA/) built using the [*Redoc CLI*](https://redocly.com/docs/cli)
 
 
 ## 2. Backend and Database
