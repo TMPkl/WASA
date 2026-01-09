@@ -143,4 +143,6 @@ func (rt *_router) AddGroupMember(w http.ResponseWriter, r *http.Request, ps htt
 		http.Error(w, fmt.Sprintf("failed to add member to group: %v", err), http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusNoContent)
+
 }
