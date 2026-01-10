@@ -245,6 +245,12 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveGroupRequest'
       responses:
         "204":
           description: Left group
@@ -617,3 +623,15 @@ components:
           type: integer
           format: int64
           description: ID of the created group
+
+    LeaveGroupRequest:
+      type: object
+      description: Leave group request payload
+      required: [username]
+      properties:
+        username:
+          type: string
+          description: Username of the user leaving the group
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
