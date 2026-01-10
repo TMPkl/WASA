@@ -148,3 +148,11 @@ func (db *appdbimpl) UpdateGroupPhoto(groupID uint, photoData []byte) error {
 
 	return nil
 }
+func (db *appdbimpl) GroupExists(groupID uint) (bool, error) {
+	var count int
+	err := db.c.QueryRow("SELECT COUNT(*) FROM Groups WHERE id = ?", groupID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if group exists: %w", err)
+	}
+	return count > 0, nil
+}

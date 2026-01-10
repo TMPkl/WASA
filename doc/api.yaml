@@ -261,7 +261,7 @@ paths:
         "401":
           description: Unauthorized
         "208":
-          description: Member not in group
+          
 
   /groups/{groupId}/name:
     patch:
@@ -542,11 +542,11 @@ components:
     GroupMember:
       type: object
       description: Group member payload
-      required: [userId]
+      required: [username]
       properties:
-        userId:
+        username:
           type: string
-          description: User identifier
+          description: Username of the member to add
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
@@ -554,9 +554,15 @@ components:
     GroupName:
       type: object
       description: Group name payload
-      required: [name]
+      required: [newGroupName, username]
       properties:
-        name:
+        username:
+          type: string
+          description: Username of the user renaming the group
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+        newGroupName:
           type: string
           description: Group name
           minLength: 3

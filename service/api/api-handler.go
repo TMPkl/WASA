@@ -29,6 +29,9 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.POST("/groups/:groupId/members", rt.AddGroupMember)
 
 	rt.router.DELETE("/groups/:groupId/members/me", rt.RemoveMeFromGroup)
+
+	rt.router.PATCH("/groups/:groupId/name", rt.RenameGroup)
+
 	//test
 	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// 	data, err := rt.readFileFromRequest(r)

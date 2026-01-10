@@ -76,7 +76,17 @@ func (rt *_router) AddGroupMember(w http.ResponseWriter, r *http.Request, ps htt
 	groupIDParam := ps.ByName("groupId")
 	var rqst request
 
-	err := json.NewDecoder(r.Body).Decode(&rqst)
+	groupExists, err := rt.db.GroupExists(uint(atoi(groupIDParam)))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error checking group existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !groupExists {
+		http.Error(w, "group does not exist", http.StatusBadRequest)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&rqst)
 	if err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
@@ -159,6 +169,15 @@ func (rt *_router) RemoveMeFromGroup(w http.ResponseWriter, r *http.Request, ps 
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	groupExists, err := rt.db.GroupExists(uint(atoi(groupIDParam)))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error checking group existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !groupExists {
+		http.Error(w, "group does not exist", http.StatusBadRequest)
+		return
+	}
 
 	if rqst.Username == "" {
 		http.Error(w, "username is required", http.StatusBadRequest)
@@ -199,4 +218,66 @@ func (rt *_router) RemoveMeFromGroup(w http.ResponseWriter, r *http.Request, ps 
 	}
 	w.WriteHeader(http.StatusNoContent)
 
+}
+func (rt *_router) RenameGroup(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	type request struct {
+		NewGroupName string `json:"newGroupName"`
+		Username     string `json:"username"`
+	}
+	groupIDParam := ps.ByName("groupId")
+	var rqst request
+
+	err := json.NewDecoder(r.Body).Decode(&rqst)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if rqst.NewGroupName == "" || rqst.Username == "" {
+		http.Error(w, "Invalid newGroupName or username", http.StatusBadRequest)
+		return
+	}
+	authorised, err := rt.Authorise(w, r, rqst.Username)
+
+	isInTheGroup, err := rt.db.IsUserInGroup(uint(atoi(groupIDParam)), rqst.Username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusUnauthorized)
+		return
+	}
+	if !isInTheGroup {
+		http.Error(w, "unauthorized - user not in group", http.StatusUnauthorized)
+		return
+	}
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusUnauthorized)
+		return
+	}
+	if !authorised {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var groupID uint
+	_, err = fmt.Sscanf(groupIDParam, "%d", &groupID)
+	if err != nil {
+		http.Error(w, "invalid group ID", http.StatusBadRequest)
+		return
+	}
+	groupExists, err := rt.db.GroupExists(groupID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error checking group existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !groupExists {
+		http.Error(w, "group does not exist", http.StatusBadRequest)
+		return
+	}
+
+	err = rt.db.RenameGroup(groupID, rqst.NewGroupName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to rename group: %v", err), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

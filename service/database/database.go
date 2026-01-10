@@ -71,6 +71,7 @@ type AppDatabase interface {
 	IsUserInGroup(groupID uint, username string) (bool, error)
 	SaveGroupMessage(username string, groupID uint, messageContent string, ap attachments.AttachmentsPack) (Message, error)
 	UpdateGroupPhoto(groupID uint, photoData []byte) error
+	GroupExists(groupID uint) (bool, error)
 }
 
 type appdbimpl struct {
