@@ -146,3 +146,57 @@ func (rt *_router) AddGroupMember(w http.ResponseWriter, r *http.Request, ps htt
 	w.WriteHeader(http.StatusNoContent)
 
 }
+
+func (rt *_router) RemoveMeFromGroup(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	type request struct {
+		Username string `json:"username"`
+	}
+	groupIDParam := ps.ByName("groupId")
+	var rqst request
+
+	err := json.NewDecoder(r.Body).Decode(&rqst)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if rqst.Username == "" {
+		http.Error(w, "username is required", http.StatusBadRequest)
+		return
+	}
+	authorised, err := rt.Authorise(w, r, rqst.Username)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusUnauthorized)
+		return
+	}
+	if !authorised {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var groupID uint
+	_, err = fmt.Sscanf(groupIDParam, "%d", &groupID)
+	if err != nil {
+		http.Error(w, "invalid group ID", http.StatusBadRequest)
+		return
+	}
+
+	isMember, err := rt.db.IsUserInGroup(groupID, rqst.Username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error checking group membership: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !isMember {
+		http.Error(w, "user not in group", http.StatusAlreadyReported)
+		return
+	}
+
+	err = rt.db.RemoveMemberFromGroup(groupID, rqst.Username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to remove member from group: %v", err), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+
+}
