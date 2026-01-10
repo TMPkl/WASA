@@ -32,6 +32,8 @@ func (rt *_router) Handler() http.Handler {
 
 	rt.router.PATCH("/groups/:groupId/name", rt.RenameGroup)
 
+	rt.router.POST("/groups/:groupId/photo", rt.UpdateGroupPhoto)
+
 	//test
 	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// 	data, err := rt.readFileFromRequest(r)
