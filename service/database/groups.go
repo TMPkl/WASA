@@ -19,7 +19,7 @@ func (db *appdbimpl) CreateGroup(groupName string, firstMember string) (uint, er
 	//3 add members to a conversation by inserting into Groups_memberships
 
 	//1 Create a new group conversation
-	res, err := tx.Exec("INSERT INTO Conversations (type, photo_id) VALUES ('group', NULL)")
+	res, err := tx.Exec("INSERT INTO Conversations (type) VALUES ('group')")
 	if err != nil {
 		return 0, fmt.Errorf("failed to create group conversation: %w", err)
 	}

@@ -109,7 +109,7 @@ func (db *appdbimpl) CreatePrivateConversation(username1 string, username2 strin
 	}
 
 	// Create conversation
-	res, err := db.c.Exec("INSERT INTO Conversations (type, photo_id) VALUES (?, ?)", "private", nil)
+	res, err := db.c.Exec("INSERT INTO Conversations (type) VALUES (?)", "private")
 	if err != nil {
 		return 0, fmt.Errorf("Failed to create conversation: %w", err)
 	}

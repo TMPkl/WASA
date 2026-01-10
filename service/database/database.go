@@ -72,6 +72,9 @@ type AppDatabase interface {
 	SaveGroupMessage(username string, groupID uint, messageContent string, ap attachments.AttachmentsPack) (Message, error)
 	UpdateGroupPhoto(groupID uint, photoData []byte) error
 	GroupExists(groupID uint) (bool, error)
+
+	GetConversationSnippet(conversationID uint) (*ConvSnippet, error)
+	GetAllConIDsForUser(username string) ([]uint, error)
 }
 
 type appdbimpl struct {

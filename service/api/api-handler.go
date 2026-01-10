@@ -27,12 +27,12 @@ func (rt *_router) Handler() http.Handler {
 	// Groups endpoints
 	rt.router.POST("/groups", rt.CreateGroup)
 	rt.router.POST("/groups/:groupId/members", rt.AddGroupMember)
-
 	rt.router.DELETE("/groups/:groupId/members/me", rt.RemoveMeFromGroup)
 
 	rt.router.PATCH("/groups/:groupId/name", rt.RenameGroup)
-
 	rt.router.POST("/groups/:groupId/photo", rt.UpdateGroupPhoto)
+
+	rt.router.GET("/conversations/:username", rt.GetMyConversations)
 
 	//test
 	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
