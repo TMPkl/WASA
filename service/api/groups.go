@@ -238,6 +238,10 @@ func (rt *_router) RenameGroup(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 	authorised, err := rt.Authorise(w, r, rqst.Username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusUnauthorized)
+		return
+	}
 
 	isInTheGroup, err := rt.db.IsUserInGroup(uint(atoi(groupIDParam)), rqst.Username)
 	if err != nil {
@@ -249,10 +253,6 @@ func (rt *_router) RenameGroup(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 
-	if err != nil {
-		http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusUnauthorized)
-		return
-	}
 	if !authorised {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
