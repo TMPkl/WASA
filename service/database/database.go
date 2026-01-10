@@ -75,6 +75,8 @@ type AppDatabase interface {
 
 	GetConversationSnippet(conversationID uint) (*ConvSnippet, error)
 	GetAllConIDsForUser(username string) ([]uint, error)
+	GetConversationHistory(conversationID uint, limit int) ([]Message, error)
+	GetConversationParticipants(conversationID uint) ([]string, error)
 }
 
 type appdbimpl struct {

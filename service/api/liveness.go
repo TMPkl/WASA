@@ -12,11 +12,11 @@ func (rt *_router) liveness(w http.ResponseWriter, r *http.Request, ps httproute
 
 	if err := rt.db.Ping(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("database not reachable"))
+		_, _ = w.Write([]byte("database not reachable"))
 		return
 	} else {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 		return
 	}
 }

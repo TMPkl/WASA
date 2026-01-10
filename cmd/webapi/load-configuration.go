@@ -73,10 +73,6 @@ func loadConfiguration() (WebAPIConfiguration, error) {
 		cfg.Web = fileCfg.Web
 		cfg.DB = fileCfg.DB
 		cfg.Debug = fileCfg.Debug
-		// Keep cfg.Config.Path as the path used to load the file (preserve original)
-		// Log which config file was loaded and key values for easier debugging
-		fmt.Printf("Loaded config file: %s\n", cfg.Config.Path)
-		fmt.Printf("Config: Web.APIHost=%s, DB.Filename=%s\n", cfg.Web.APIHost, cfg.DB.Filename)
 		_ = fp.Close()
 	}
 

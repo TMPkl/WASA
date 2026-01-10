@@ -49,7 +49,7 @@ func (db *appdbimpl) AddProfilePhoto(username string, photoData []byte) error {
 	if err != nil {
 		return fmt.Errorf("Failed to start transaction: %w", err)
 	}
-	defer tx.Rollback() // rollback
+	defer func() { _ = tx.Rollback() }()
 
 	// Wstaw nowy obraz
 	res, err := tx.Exec("INSERT INTO Users_photos(photo_data) VALUES(?)", photoData)
@@ -65,7 +65,7 @@ func (db *appdbimpl) AddProfilePhoto(username string, photoData []byte) error {
 	//stare photo_id
 	var oldPhotoID sql.NullInt64
 	err = tx.QueryRow("SELECT photo_id FROM users WHERE username=?", username).Scan(&oldPhotoID)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("Failed to query old photo_id: %w", err)
 	}
 

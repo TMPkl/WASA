@@ -151,7 +151,7 @@ func (db *appdbimpl) MessageOwner(messageID string) (string, error) {
 }
 func (db *appdbimpl) GetMessageByID(messageID string) (*Message, error) {
 	var message Message
-	err := db.c.QueryRow("SELECT id, conversation_id, sender_username, content, timestamp, attachment, COALESCE(reaction, ''), status FROM Messages WHERE id = ?", messageID).
+	err := db.c.QueryRow("SELECT id, conversation_id, sender_username, content, timestamp, COALESCE(attachment, ''), COALESCE(reacted_to_message_id, 0), status FROM Messages WHERE id = ?", messageID).
 		Scan(&message.ID, &message.ConversationID, &message.SenderUsername, &message.Content, &message.Timestamp, &message.Attachment, &message.Reacted_to_message_id, &message.Status)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to bla bla bla fiu fiu fiu: %w", err)
@@ -159,6 +159,7 @@ func (db *appdbimpl) GetMessageByID(messageID string) (*Message, error) {
 	return &message, nil
 }
 func (db *appdbimpl) UserInConversation(username string, conversationID uint) (bool, error) {
+	// Check if user is in private conversation
 	var exists int
 	err := db.c.QueryRow(`
 		SELECT 1
@@ -167,11 +168,28 @@ func (db *appdbimpl) UserInConversation(username string, conversationID uint) (b
 		LIMIT 1
 	`, username, conversationID).Scan(&exists)
 
+	if err == nil {
+		return true, nil
+	}
+
+	if !errors.Is(err, sql.ErrNoRows) {
+		return false, fmt.Errorf("Database error checking private conversation: %w", err)
+	}
+
+	// Check if user is in group conversation
+	err = db.c.QueryRow(`
+		SELECT 1
+		FROM Groups g
+		JOIN Groups_memberships gm ON g.id = gm.group_id
+		WHERE gm.member_username = ? AND g.conversation_id = ?
+		LIMIT 1
+	`, username, conversationID).Scan(&exists)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
-		return false, fmt.Errorf("Database error: %w", err)
+		return false, fmt.Errorf("Database error checking group conversation: %w", err)
 	}
 
 	return true, nil
@@ -247,4 +265,57 @@ func (db *appdbimpl) GetReactionIDByUsernameAndBaseMessageID(username string, ba
 		return 0, fmt.Errorf("Failed to get reaction message ID: %w", err)
 	}
 	return reactionMessageID, nil
+}
+
+// GetConversationHistory retrieves the message history for a conversation
+// Returns messages ordered by timestamp (newest first) with a limit
+func (db *appdbimpl) GetConversationHistory(conversationID uint, limit int) ([]Message, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	query := `
+		SELECT id, conversation_id, sender_username, content, timestamp, 
+		       COALESCE(attachment, ''), COALESCE(reacted_to_message_id, 0), status
+		FROM Messages
+		WHERE conversation_id = ? AND reacted_to_message_id IS NULL
+		ORDER BY timestamp DESC
+		LIMIT ?
+	`
+
+	rows, err := db.c.Query(query, conversationID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query messages: %w", err)
+	}
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var msg Message
+		err := rows.Scan(
+			&msg.ID,
+			&msg.ConversationID,
+			&msg.SenderUsername,
+			&msg.Content,
+			&msg.Timestamp,
+			&msg.Attachment,
+			&msg.Reacted_to_message_id,
+			&msg.Status,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan message: %w", err)
+		}
+		messages = append(messages, msg)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating messages: %w", err)
+	}
+
+	// Reverse to get oldest first (chronological order)
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
+	return messages, nil
 }

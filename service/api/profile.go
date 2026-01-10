@@ -72,12 +72,16 @@ func verifyJWT(tokenStr string) (*jwt.Token, error) {
 func (rt *_router) login(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	username, exists, err := rt.checkUser(r)
 	if err != nil {
-		rt.baseLogger.Printf(string(err.Error()))
+		rt.baseLogger.Printf(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if !exists {
-		rt.db.AddNewUser(username)
+		if err := rt.db.AddNewUser(username); err != nil {
+			rt.baseLogger.Printf("Error adding new user: %s", err.Error())
+			http.Error(w, "Error creating user", http.StatusInternalServerError)
+			return
+		}
 	}
 	token, err := GenerateJWT([]byte(secret), username)
 	if err != nil {
@@ -87,7 +91,7 @@ func (rt *_router) login(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	respons := map[string]string{"token": token}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(respons)
+	_ = json.NewEncoder(w).Encode(respons)
 }
 
 // ##############UpdateMyUsername##################
@@ -105,7 +109,7 @@ func (rt *_router) UpdateMyUsername(w http.ResponseWriter, r *http.Request, ps h
 	if len(req.NewUsername) < 5 || len(req.NewUsername) > 16 || req.NewUsername == "" {
 		rt.baseLogger.Printf("Username must be between 5 and 16 characters")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Username must be between 5 and 16 characters"))
+		_, _ = w.Write([]byte("Username must be between 5 and 16 characters"))
 		return
 	}
 
@@ -131,7 +135,7 @@ func (rt *_router) UpdateMyUsername(w http.ResponseWriter, r *http.Request, ps h
 	if err != nil {
 		rt.baseLogger.Printf(err.Error())
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -143,13 +147,15 @@ func (rt *_router) UpdateMyUsername(w http.ResponseWriter, r *http.Request, ps h
 	respons := map[string]string{"token": token}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(respons)
+	_ = json.NewEncoder(w).Encode(respons)
 
 }
 
 // ###############SetProfilePhoto######################
 func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
-	r.ParseMultipartForm(10 << 10) // limit upload size to 5MB
+	if err := r.ParseMultipartForm(10 << 10); err != nil {
+		return nil, errors.New("Error parsing multipart form")
+	}
 
 	file, header, err := r.FormFile("photo")
 	if err != nil {
@@ -163,10 +169,9 @@ func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
 	buffer := make([]byte, 512)
 	_, err = file.Read(buffer)
 	if err != nil {
-		fmt.Println("cos tma nie mozna odczytac pliku sprawdzajac rozszerzenie bla bla bla bla")
-		return nil, nil
+		return nil, errors.New("cannot read file for extension detection")
 	}
-	file.Seek(0, 0)
+	_, _ = file.Seek(0, 0)
 
 	mimeType := http.DetectContentType(buffer)
 	if mimeType != "image/jpg" && mimeType != "image/png" {
@@ -176,8 +181,7 @@ func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
 	//2. ustaw kwadrat 200x200 px
 	img, _, err := image.Decode(file)
 	if err != nil {
-		fmt.Println("cos tma nie mozna zdekodowac obrazu bla bla bla bla")
-		return nil, nil
+		return nil, errors.New("cannot decode image")
 	}
 
 	imaging.CropCenter(img, 200, 200) ///kwadratowwanie potem zaleznei od frontu trzeba dobrac transformacje
@@ -234,7 +238,7 @@ func (rt *_router) SetProfilePhoto(w http.ResponseWriter, r *http.Request, ps ht
 	if err != nil {
 		rt.baseLogger.Printf(err.Error())
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 

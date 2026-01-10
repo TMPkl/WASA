@@ -87,3 +87,66 @@ func (db *appdbimpl) GetAllConIDsForUser(username string) ([]uint, error) {
 
 	return conversationIDs, nil
 }
+
+// GetConversationParticipants retrieves all usernames participating in a conversation
+func (db *appdbimpl) GetConversationParticipants(conversationID uint) ([]string, error) {
+	// First check the conversation type
+	var convType string
+	err := db.c.QueryRow(`SELECT type FROM Conversations WHERE id = ?`, conversationID).Scan(&convType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get conversation type: %w", err)
+	}
+
+	var participants []string
+
+	if convType == "private" {
+		// Get participants from Private_conversations_memberships
+		rows, err := db.c.Query(`
+			SELECT member_username
+			FROM Private_conversations_memberships
+			WHERE conversation_id = ?
+		`, conversationID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query private conversation participants: %w", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var username string
+			if err := rows.Scan(&username); err != nil {
+				return nil, fmt.Errorf("failed to scan participant: %w", err)
+			}
+			participants = append(participants, username)
+		}
+
+		if err = rows.Err(); err != nil {
+			return nil, fmt.Errorf("error iterating participants: %w", err)
+		}
+	} else if convType == "group" {
+		// Get participants from Groups_memberships via group ID
+		rows, err := db.c.Query(`
+			SELECT gm.member_username
+			FROM Groups g
+			JOIN Groups_memberships gm ON g.id = gm.group_id
+			WHERE g.conversation_id = ?
+		`, conversationID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query group conversation participants: %w", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var username string
+			if err := rows.Scan(&username); err != nil {
+				return nil, fmt.Errorf("failed to scan participant: %w", err)
+			}
+			participants = append(participants, username)
+		}
+
+		if err = rows.Err(); err != nil {
+			return nil, fmt.Errorf("error iterating participants: %w", err)
+		}
+	}
+
+	return participants, nil
+}

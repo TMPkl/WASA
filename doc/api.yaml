@@ -199,6 +199,42 @@ paths:
         "500":
           description: Server error
 
+  /messages/{messageId}/attachments:
+    get:
+      tags: [messages]
+      summary: Get message attachments
+      description: Retrieves all attachments for a specific message.
+      operationId: getMessageAttachments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+        - name: username
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+          description: Username for authorization
+      responses:
+        "200":
+          description: Attachments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attachments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Attachment'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - user not in conversation
+        "404":
+          description: Message not found
+
   /messages/{messageId}/reactions:
     post:
       tags: [messages]

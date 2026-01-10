@@ -41,3 +41,5 @@ napisac jaki jestem super i ze robie to nawet na tranzakcjach (czasami jak trzeb
 napisac ze na moje male potrzeby zapisuje zdjecia w bazie jako bloby ale wiem ze to zle i w realnych projektach sie tak nie robi
 
 napisac ze obrabiam zdjecia tak aby byly zapisywane jako kwadraty 200x200px latwe do odczytu i wyslania potel do frontu i ze uzywam do tego biblioteki imaging
+
+Napisac ze czasami endpointy oczekuja requestow w formiacie JSON a czasami dajko form-data kiedy sa przesylane pliki i ze to jest opisane w api.yaml i ze frontend to obsluguje albo bardzije bedzie obslugiwac 

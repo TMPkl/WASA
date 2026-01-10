@@ -2,6 +2,7 @@ package api
 
 //################file for endpoints form tag messages##########
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -63,11 +64,9 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 
-	// Check if conversation exists
+	// check if conversation exists
 	convID, err := rt.db.DoesUsersOwnConversation(rqst.SenderUsername, rqst.ReciverUsername)
 	if err != nil {
-		// Conversation doesn't exist, create new one
-		//rt.baseLogger.Printf("Creating new conversation between %s and %s", rqst.SenderUsername, rqst.ReciverUsername)
 		convID, err = rt.db.CreatePrivateConversation(rqst.SenderUsername, rqst.ReciverUsername)
 		if err != nil {
 			rt.baseLogger.Printf("Failed to create conversation: %s", err.Error())
@@ -76,7 +75,6 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		}
 	}
 
-	// Parse attachments from multipart form
 	var attachmentsPack attachments.AttachmentsPack
 	files := r.MultipartForm.File["attachments"]
 	for _, fileHeader := range files {
@@ -98,7 +96,6 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		attachmentsPack.Attachments = append(attachmentsPack.Attachments, attachment)
 	}
 
-	// Save message to database
 	message, err := rt.db.SaveMessage(rqst.SenderUsername, rqst.Content, attachmentsPack, convID)
 	if err != nil {
 		rt.baseLogger.Printf("Failed to save message: %s", err.Error())
@@ -268,7 +265,7 @@ type ReactionRequest struct {
 
 func atoi(s string) int {
 	var n int
-	fmt.Sscanf(s, "%d", &n)
+	_, _ = fmt.Sscanf(s, "%d", &n)
 	return n
 }
 
@@ -399,4 +396,93 @@ func (rt *_router) RemoveReactionFromMessage(w http.ResponseWriter, r *http.Requ
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (rt *_router) GetMessageAttachments(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	messageID := ps.ByName("messageId")
+	if messageID == "" {
+		http.Error(w, "message ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get username from query parameter for authorization
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		http.Error(w, "username is required", http.StatusBadRequest)
+		return
+	}
+
+	// Authorize user
+	authorised, err := rt.Authorise(w, r, username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusUnauthorized)
+		return
+	}
+	if !authorised {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get the message from database
+	message, err := rt.db.GetMessageByID(messageID)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to get message by ID %s: %v", messageID, err)
+		http.Error(w, "message not found", http.StatusNotFound)
+		return
+	}
+
+	// Verify user is in the conversation
+	isInConv, err := rt.db.UserInConversation(username, message.ConversationID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to verify user in conversation: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !isInConv {
+		http.Error(w, "forbidden: user not in conversation", http.StatusForbidden)
+		return
+	}
+
+	if len(message.Attachment) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"attachments":[]}`))
+		return
+	}
+
+	attachmentsPack, err := attachments.DecodeFromGOB(message.Attachment)
+	if err != nil {
+		http.Error(w, "failed to decode attachments", http.StatusInternalServerError)
+		return
+	}
+
+	type AttachmentResponse struct {
+		Type    string `json:"type"`
+		Content string `json:"content"`
+	}
+
+	type Response struct {
+		Attachments []AttachmentResponse `json:"attachments"`
+	}
+
+	var attachmentResponses []AttachmentResponse
+	for _, att := range attachmentsPack.Attachments {
+		attachmentResponses = append(attachmentResponses, AttachmentResponse{
+			Type:    att.Type,
+			Content: base64.StdEncoding.EncodeToString(att.Content),
+		})
+	}
+
+	response := Response{
+		Attachments: attachmentResponses,
+	}
+
+	data, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }

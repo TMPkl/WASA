@@ -12,7 +12,7 @@ func (db *appdbimpl) CreateGroup(groupName string, firstMember string) (uint, er
 	if err != nil {
 		return 0, fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback() // rollback if not committed
+	defer func() { _ = tx.Rollback() }() // rollback if not committed
 
 	//1crate conversation and save its id
 	//2create group based on conversation id
@@ -125,7 +125,7 @@ func (db *appdbimpl) UpdateGroupPhoto(groupID uint, photoData []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback() //deferrrrr
+	defer func() { _ = tx.Rollback() }()
 
 	res, err := tx.Exec("INSERT INTO Users_photos(photo_data) VALUES(?)", photoData)
 	if err != nil {

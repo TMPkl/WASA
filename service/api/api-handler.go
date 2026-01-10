@@ -12,7 +12,7 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.PATCH("/me/username", rt.UpdateMyUsername)
 	rt.router.POST("/me/photo", rt.SetProfilePhoto)
 
-	//Messages endpoints
+	// Messages endpoints
 	rt.router.POST("/messages", rt.SendMessage)
 	rt.router.DELETE("/messages/:messageId", rt.DeleteMessage)
 	// Forward message
@@ -20,6 +20,7 @@ func (rt *_router) Handler() http.Handler {
 
 	rt.router.POST("/messages/:messageId/reactions", rt.ReactToMessage)
 	rt.router.DELETE("/messages/:messageId/reactions", rt.RemoveReactionFromMessage)
+	rt.router.GET("/messages/:messageId/attachments", rt.GetMessageAttachments)
 
 	// Special routes
 	rt.router.GET("/liveness", rt.liveness)
@@ -33,16 +34,7 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.POST("/groups/:groupId/photo", rt.UpdateGroupPhoto)
 
 	rt.router.GET("/conversations/:username", rt.GetMyConversations)
+	rt.router.GET("/conversation/:conversationId", rt.GetConversation)
 
-	//test
-	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// 	data, err := rt.readFileFromRequest(r)
-	// 	if err != nil {
-	// 		http.Error(w, err.Error(), http.StatusBadRequest)
-	// 		return
-	// 	}
-	// 	w.WriteHeader(http.StatusOK)
-	// 	w.Write(data)
-	// })
 	return rt.router
 }
