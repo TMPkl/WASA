@@ -4,6 +4,10 @@ info:
   description: REST API specification for WASAtext messaging system.
   version: "3.0.1"
 
+servers:
+  - url: http://localhost:3010
+    description: Test server running locally, for development purposes.
+
 tags:
   - name: profile
     description: Operations related to user profile
@@ -74,13 +78,19 @@ paths:
         "204":
           description: Photo updated
 
-  /conversations:
+  /conversations/{username}:
     get:
       tags: [conversations]
       summary: List conversations
       description: Retrieves all conversations of the authenticated user.
       operationId: getMyConversations
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: List of conversations
@@ -91,9 +101,9 @@ paths:
                 minItems: 0
                 maxItems: 1000
                 items:
-                  $ref: '#/components/schemas/Conversation'
+                  $ref: '#/components/schemas/ConversationSnippet'
 
-  /conversations/{conversationId}:
+  /conversation/{conversationId}:
     get:
       tags: [conversations]
       summary: Get conversation
@@ -101,7 +111,11 @@ paths:
       operationId: getConversation
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/ConversationId'
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Conversation data
@@ -120,9 +134,21 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/MessageCreate'
+              type: object
+              properties:
+                senderUsername:
+                  type: string
+                receiverUsername:
+                  type: string
+                content:
+                  type: string
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
       responses:
         "201":
           description: Message sent
@@ -162,16 +188,16 @@ paths:
       responses:
         "201":
           description: Message forwarded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Message'
         "400":
           description: Invalid request
-        "500":
-          description: Server error
         "401":
           description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Message not found
+        "500":
+          description: Server error
 
   /messages/{messageId}/reactions:
     post:
@@ -194,7 +220,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Reaction'
+                $ref: '#/components/schemas/Message'
         "400":
           description: Invalid request
         "500":
@@ -456,10 +482,22 @@ components:
           items:
             $ref: '#/components/schemas/Message'
 
+    ConversationSnippet:
+      type: object
+      description: A snippet of a conversation for list view
+      properties:
+        ConversationID:
+          type: integer
+          description: Unique ID of the conversation
+        ConversationType:
+          type: string
+          description: Type of conversation (private or group)
+          enum: [private, group]
+
     Message:
       type: object
       description: Message entity
-      required: [id, senderId, content, timestamp]
+      required: [id, senderId, conversationId, content, timestamp]
       properties:
         id:
           type: string
@@ -470,6 +508,12 @@ components:
         senderId:
           type: string
           description: Sender identifier
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+        conversationId:
+          type: string
+          description: Conversation ID
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
@@ -519,14 +563,11 @@ components:
     ForwardRequest:
       type: object
       description: Forward request
-      required: [addressingConversationID, username]
+      required: [conversation_id, username]
       properties:
-        addressingConversationID:
-          type: string
-          description: Target conversation
-          minLength: 1
-          maxLength: 64
-          pattern: "^[0-9]+$"
+        conversation_id:
+          type: integer
+          description: Target conversation ID
         username:
           type: string
           description: Username of the user forwarding the message
