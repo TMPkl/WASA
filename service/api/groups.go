@@ -118,6 +118,7 @@ func (rt *_router) AddGroupMember(w http.ResponseWriter, r *http.Request, ps htt
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	//trzeba sprawdzic czy username jest w grupie bo tylko twdy moze dodawc ludzi chyba tka bylo w dokumentacji?????? alo i ne?
 
 	legit, err := rt.db.IsUserInGroup(uint(atoi(groupIDParam)), rqst.Username)
 	if err != nil {
@@ -139,6 +140,7 @@ func (rt *_router) AddGroupMember(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 
+	///ehhh phrasing
 	var groupID uint
 	_, err = fmt.Sscanf(groupIDParam, "%d", &groupID)
 	if err != nil {

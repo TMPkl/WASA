@@ -39,6 +39,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+        "400":
+          description: Invalid request body or missing username
+        "500":
+          description: Server error (e.g., error creating user or generating token)
 
   /me/username:
     patch:
@@ -55,17 +59,23 @@ paths:
               $ref: '#/components/schemas/UsernameUpdate'
       responses:
         "200":
-          description: Username updated
+          description: Username updated, returns new JWT token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+        "400":
+          description: Invalid request body or username validation failed (must be 5-16 characters)
+        "401":
+          description: Unauthorized - invalid or missing token
+        "500":
+          description: Server error
 
   /me/photo:
     post:
       tags: [profile]
       summary: Update profile photo
-      description: Uploads or replaces the user profile photo.
+      description: Uploads or replaces the user profile photo. Photo is resized to 200x200 px and converted to JPEG.
       operationId: setMyPhoto
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -75,8 +85,14 @@ paths:
             schema:
               $ref: '#/components/schemas/PhotoUpload'
       responses:
-        "204":
-          description: Photo updated
+        "200":
+          description: Photo updated successfully
+        "400":
+          description: Invalid request (missing username, invalid file format, or file processing error)
+        "401":
+          description: Unauthorized - invalid or missing token
+        "500":
+          description: Server error
 
   /conversations/{username}:
     get:
@@ -102,12 +118,16 @@ paths:
                 maxItems: 1000
                 items:
                   $ref: '#/components/schemas/ConversationSnippet'
+        "401":
+          description: Unauthorized - invalid or missing token
+        "500":
+          description: Server error
 
   /conversation/{conversationId}:
     get:
       tags: [conversations]
       summary: Get conversation
-      description: Retrieves a single conversation.
+      description: Retrieves a single conversation with participants and message history.
       operationId: getConversation
       security: [{ bearerAuth: [] }]
       parameters:
@@ -116,19 +136,33 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetConversationRequest'
       responses:
         "200":
-          description: Conversation data
+          description: Conversation data with participants and messages
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Conversation'
+                $ref: '#/components/schemas/ConversationResponse'
+        "400":
+          description: Invalid conversation ID or request body
+        "401":
+          description: Unauthorized - invalid or missing token
+        "403":
+          description: Forbidden - user not in conversation
+        "500":
+          description: Server error
 
   /messages:
     post:
       tags: [messages]
       summary: Send message
-      description: Sends a new message.
+      description: Sends a new message. If conversation doesn't exist between users, creates a new private conversation.
       operationId: sendMessage
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -137,44 +171,64 @@ paths:
           multipart/form-data:
             schema:
               type: object
+              required:
+                - senderUsername
+                - receiverUsername
+                - content
               properties:
                 senderUsername:
                   type: string
+                  description: Username of the sender
                 receiverUsername:
                   type: string
+                  description: Username of the receiver
                 content:
                   type: string
+                  description: Message content
                 attachments:
                   type: array
                   items:
                     type: string
                     format: binary
+                  description: Optional file attachments
       responses:
         "201":
-          description: Message sent
+          description: Message sent successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Message'
+                $ref: '#/components/schemas/MessageResponse'
+        "400":
+          description: Invalid request (missing required fields)
+        "401":
+          description: Unauthorized - invalid or missing token
+        "500":
+          description: Server error
 
   /messages/{messageId}:
     delete:
       tags: [messages]
       summary: Delete message
-      description: Deletes a message.
+      description: Deletes a message. Only the sender can delete their own message.
       operationId: deleteMessage
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/MessageId'
       responses:
         "204":
-          description: Message deleted
+          description: Message deleted successfully
+        "401":
+          description: Unauthorized - invalid token or not the message sender
+        "404":
+          description: Message not found
+        "500":
+          description: Server error
 
   /messages/{messageId}/forwards:
     post:
       tags: [messages]
       summary: Forward message
-      description: Forwards an existing message.
+      description: Forwards an existing message to another conversation. User must be a member of the target conversation.
       operationId: forwardMessage
       security: [{ bearerAuth: [] }]
       parameters:
@@ -187,15 +241,15 @@ paths:
               $ref: '#/components/schemas/ForwardRequest'
       responses:
         "201":
-          description: Message forwarded
+          description: Message forwarded successfully
         "400":
-          description: Invalid request
+          description: Invalid request body
         "401":
-          description: Unauthorized
+          description: Unauthorized - invalid or missing token
         "403":
-          description: Forbidden
+          description: Forbidden - user not in target conversation
         "404":
-          description: Message not found
+          description: Original message not found
         "500":
           description: Server error
 
@@ -239,7 +293,7 @@ paths:
     post:
       tags: [messages]
       summary: Add reaction
-      description: Adds an emoji reaction to a message.
+      description: Adds an emoji reaction to a message. User must be in the conversation.
       operationId: commentMessage
       security: [{ bearerAuth: [] }]
       parameters:
@@ -252,22 +306,24 @@ paths:
               $ref: '#/components/schemas/Reaction'
       responses:
         "201":
-          description: Reaction added
+          description: Reaction added successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Message'
+                $ref: '#/components/schemas/MessageResponse'
         "400":
-          description: Invalid request
+          description: Invalid request body
+        "401":
+          description: Unauthorized - invalid or missing token
+        "403":
+          description: Forbidden - user not in conversation
         "500":
           description: Server error
-        "401":
-          description: Unauthorized
 
     delete:
       tags: [messages]
       summary: Remove reaction
-      description: Removes a reaction from a message.
+      description: Removes a reaction from a message. User must be in the conversation.
       operationId: uncommentMessage
       security: [{ bearerAuth: [] }]
       parameters:
@@ -280,19 +336,21 @@ paths:
               $ref: '#/components/schemas/DeleteReaction'
       responses:
         "204":
-          description: Reaction removed
+          description: Reaction removed successfully
+        "400":
+          description: Invalid request body
+        "401":
+          description: Unauthorized , invalid or missing token
+        "403":
+          description: Forbidden - user nt in conversation
         "500":
           description: Server error
-        "400":
-          description: Invalid request
-        "401":
-          description: Unauthorized
 
   /groups/{groupId}/members:
     post:
       tags: [groups]
       summary: Add group member
-      description: Adds a user to a group.
+      description: Adds a user to a group. Only existing group members can add new members.
       operationId: addToGroup
       security: [{ bearerAuth: [] }]
       parameters:
@@ -302,18 +360,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GroupMember'
+              $ref: '#/components/schemas/AddGroupMemberRequest'
       responses:
         "204":
-          description: Member added, no content
+          description: Member added successfully
+        "400":
+          description: Invalid request (group doesn't exist, user to add doesn't exist, or invalid group ID)
+        "401":
+          description: Unauthorized - invvalid token or requesting user not in group
+        "208":
+          description: User already in group
         "500":
           description: Server error
-        "400":
-          description: Invalid request
-        "401":
-          description: Unauthorized
-        "208":
-          description: Member already in group
         
 
   /groups/{groupId}/members/me:
@@ -333,22 +391,22 @@ paths:
               $ref: '#/components/schemas/LeaveGroupRequest'
       responses:
         "204":
-          description: Left group
+          description: Successfully left group
+        "400":
+          description: Invalid request (group doesn't exist or invalid group ID)
+        "401":
+          description: Unauthorized - invalid or missing token
+        "208":
+          description: User not in group
         "500":
           description: Server error
-        "400":
-          description: Invalid request
-        "401":
-          description: Unauthorized
-        "208":
-          description: Member not in group
           
 
   /groups/{groupId}/name:
     patch:
       tags: [groups]
       summary: Rename group
-      description: Updates the group name.
+      description: Updates the group name. Only group members can rename the group.
       operationId: setGroupName
       security: [{ bearerAuth: [] }]
       parameters:
@@ -361,19 +419,19 @@ paths:
               $ref: '#/components/schemas/GroupName'
       responses:
         "204":
-          description: Group renamed, no content
+          description: Group renamed successfully
+        "400":
+          description: Invalid request (missing fields, invalid group ID, or group doesn't exist)
+        "401":
+          description: Unauthorized - invalid token or user not in group
         "500":
           description: Server error
-        "400":
-          description: Invalid request
-        "401":
-          description: Unauthorized
 
   /groups/{groupId}/photo:
     post:
       tags: [groups]
       summary: Update group photo
-      description: Uploads or replaces group photo.
+      description: Uploads or replaces group photo. Only group members can update the photo.
       operationId: setGroupPhoto
       security: [{ bearerAuth: [] }]
       parameters:
@@ -386,13 +444,19 @@ paths:
               $ref: '#/components/schemas/PhotoUpload'
       responses:
         "204":
-          description: Group photo updated
+          description: Group photo updated successfully
+        "400":
+          description: Invalid request (missing username, invalid photo, invalid group ID, or group doesn't exist)
+        "401":
+          description: Unauthorized - invalid or missing token
+        "500":
+          description: Server error
 
   /groups:
     post:
       tags: [groups]
       summary: Create group
-      description: Creates a new group and its conversation.
+      description: Creates a new group and its conversation. The creator is automatically added as a member.
       operationId: createGroup
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -403,11 +467,17 @@ paths:
               $ref: '#/components/schemas/GroupCreate'
       responses:
         "201":
-          description: Group created
+          description: Group created successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GroupCreateResponse'
+        "400":
+          description: Invalid request body or missing group_name
+        "401":
+          description: Unauthorized - invalid or missing token
+        "500":
+          description: Server error
 
 components:
 
@@ -480,12 +550,18 @@ components:
     UsernameUpdate:
       type: object
       description: Username update payload
-      required: [newUsername]
+      required: [username, new-username]
       properties:
-        newUsername:
+        username:
           type: string
-          description: New username
+          description: Current username
           minLength: 3
+          maxLength: 16
+          pattern: "^[a-zA-Z0-9_]+$"
+        new-username:
+          type: string
+          description: New username (must be 5-16 characters)
+          minLength: 5
           maxLength: 16
           pattern: "^[a-zA-Z0-9_]+$"
 
@@ -529,6 +605,85 @@ components:
           type: string
           description: Type of conversation (private or group)
           enum: [private, group]
+        GroupName:
+          type: string
+          description: Name of the group (only for group conversations)
+        OtherUsername:
+          type: string
+          description: Username of the other participant (only for private conversations)
+        LastMessage:
+          type: string
+          description: Content of the last message in the conversation
+        LastMessageTime:
+          type: string
+          format: date-time
+          description: Timestamp of the last message
+
+    GetConversationRequest:
+      type: object
+      description: Request body for getting conversation details
+      required: [username]
+      properties:
+        username:
+          type: string
+          description: Username for authorization
+          minLength: 1
+          maxLength: 64
+        message_quantity:
+          type: integer
+          description: Number of messages to retrieve (default 50, max 100)
+          minimum: 1
+          maximum: 100
+          default: 50
+
+    ConversationResponse:
+      type: object
+      description: Full conversation data with participants and messages
+      required: [conversation_id, participants, messages]
+      properties:
+        conversation_id:
+          type: integer
+          description: Unique ID of the conversation
+        participants:
+          type: array
+          description: List of participant usernames
+          items:
+            type: string
+        messages:
+          type: array
+          description: List of messages in the conversation
+          items:
+            $ref: '#/components/schemas/MessageInConversation'
+
+    MessageInConversation:
+      type: object
+      description: Message within a conversation response
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Message ID
+        sender_username:
+          type: string
+          description: Username of the sender
+        content:
+          type: string
+          description: Message content
+        timestamp:
+          type: string
+          format: date-time
+          description: Message timestamp
+        has_attachment:
+          type: boolean
+          description: Whether the message has attachments
+        reactions:
+          type: array
+          description: List of reactions 
+          items:
+            type: string
+        status:
+          type: string
+          description: Message status
 
     Message:
       type: object
@@ -598,12 +753,12 @@ components:
 
     ForwardRequest:
       type: object
-      description: Forward request
-      required: [conversation_id, username]
+      description: Forward message request
+      required: [addressingConversationID, username]
       properties:
-        conversation_id:
+        addressingConversationID:
           type: integer
-          description: Target conversation ID
+          description: Target conversation ID to forward the message to
         username:
           type: string
           description: Username of the user forwarding the message
@@ -631,12 +786,30 @@ components:
 
     GroupMember:
       type: object
-      description: Group member payload
+      description: Group member payload (deprecated - use AddGroupMemberRequest)
       required: [username]
       properties:
         username:
           type: string
           description: Username of the member to add
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+
+    AddGroupMemberRequest:
+      type: object
+      description: Add group member request payload
+      required: [username, user_to_add]
+      properties:
+        username:
+          type: string
+          description: Username of the requesting user (must be in group)
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+        user_to_add:
+          type: string
+          description: Username of the user to add to the group
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
@@ -695,6 +868,29 @@ components:
           type: string
           description: Base64 encoded binary content
           format: byte
+
+    MessageResponse:
+      type: object
+      description: Response after sending or reacting to a message
+      required: [id, senderId, content, conversationId, timestamp]
+      properties:
+        id:
+          type: string
+          description: Message ID
+        senderId:
+          type: string
+          description: Username of the sender
+        content:
+          type: string
+          description: Message content (or emoji for reactions)
+        conversationId:
+          type: string
+          description: Conversation ID
+        timestamp:
+          type: string
+          format: date-time
+          description: Message timestamp
+
     DeleteReaction:
       type: object
       description: Delete reaction payload
