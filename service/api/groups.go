@@ -281,3 +281,62 @@ func (rt *_router) RenameGroup(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (rt *_router) UpdateGroupPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	/*
+		Content-Type: image/png or image/jpeg
+	*/
+	groupIDParam := ps.ByName("groupId")
+
+	username, _, err := r.FormFile("username")
+	if err != nil {
+		http.Error(w, "username is required", http.StatusBadRequest)
+		return
+	}
+	defer username.Close()
+	buf := make([]byte, 64)
+	n, err := username.Read(buf)
+	if err != nil {
+		http.Error(w, "failed to read username", http.StatusBadRequest)
+		return
+	}
+	rqstUsername := string(buf[:n])
+
+	authorised, err := rt.Authorise(w, r, rqstUsername)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusUnauthorized)
+		return
+	}
+	if !authorised {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	pixture, err := rt.MakePictureFromRequest(r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to read photo from request: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	var groupID uint
+	_, err = fmt.Sscanf(groupIDParam, "%d", &groupID)
+	if err != nil {
+		http.Error(w, "invalid group ID", http.StatusBadRequest)
+		return
+	}
+	groupExists, err := rt.db.GroupExists(groupID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error checking group existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !groupExists {
+		http.Error(w, "group does not exist", http.StatusBadRequest)
+		return
+	}
+
+	err = rt.db.UpdateGroupPhoto(groupID, pixture)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to update group photo: %v", err), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

@@ -166,6 +166,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Message'
+        "400":
+          description: Invalid request
+        "500":
+          description: Server error
+        "401":
+          description: Unauthorized
 
   /messages/{messageId}/reactions:
     post:
@@ -189,6 +195,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Reaction'
+        "400":
+          description: Invalid request
+        "500":
+          description: Server error
+        "401":
+          description: Unauthorized
 
     delete:
       tags: [messages]
@@ -207,6 +219,12 @@ paths:
       responses:
         "204":
           description: Reaction removed
+        "500":
+          description: Server error
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
 
   /groups/{groupId}/members:
     post:
@@ -280,14 +298,14 @@ paths:
             schema:
               $ref: '#/components/schemas/GroupName'
       responses:
-        "200":
-          description: Group renamed
-          content:
-            application/json:
-              schema:
-                type: object
-                description: Empty response
-                properties: {}
+        "204":
+          description: Group renamed, no content
+        "500":
+          description: Server error
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
 
   /groups/{groupId}/photo:
     post:
@@ -567,7 +585,7 @@ components:
     PhotoUpload:
       type: object
       description: Photo upload payload
-      required: [photo]
+      required: [photo, username]
       properties:
         photo:
           type: string
@@ -576,6 +594,13 @@ components:
           minLength: 1
           maxLength: 10485760  # 10 MB
           pattern: "^.*$"
+        username:
+          type: string
+          description: Username of the user uploading the photo
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "Karol"
 
 
     Attachment:
@@ -604,6 +629,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "Karol"
 
     GroupCreate:
       type: object
@@ -622,6 +648,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "Karol"
 
     GroupCreateResponse:
       type: object
@@ -632,6 +659,7 @@ components:
           type: integer
           format: int64
           description: ID of the created group
+          example: 12345
 
     LeaveGroupRequest:
       type: object
@@ -644,3 +672,4 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "Karol"
