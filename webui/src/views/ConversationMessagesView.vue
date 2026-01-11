@@ -153,6 +153,9 @@ export default {
         timestamp: msg.timestamp,
         attachment: msg.has_attachment
       }));
+    },
+    handleMessageDeleted(messageId) {
+      this.messages = this.messages.filter(msg => msg.id !== messageId);
     }
   }
 }
@@ -168,7 +171,7 @@ export default {
     <div class="messages flex-grow-1 mb-2">
       <div v-if="loading">Loading...</div>
       <div v-else-if="error" class="text-danger">{{ error }}</div>
-      <MessageView v-else :messages="messages" />
+      <MessageView v-else :messages="messages" @message-deleted="handleMessageDeleted" />
     </div>
 
     <MessageInputForm

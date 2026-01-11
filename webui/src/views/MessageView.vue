@@ -14,6 +14,28 @@ export default {
         }
     },
     methods: {
+        async handleDeleteMessage(messageId) {
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+            try {
+                await axios({
+                    method: 'delete',
+                    url: `${__API_URL__}/messages/${messageId}`,
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    data: {
+                        username: username
+                    }
+                });
+                this.$emit('message-deleted', messageId);
+
+            } catch (e) {
+                console.error('Failed to delete message:', e);
+                alert('Failed to delete message: ' + (e?.response?.data?.error || e.message));
+            }
+        },
         async handleDownloadAttachment(messageId) {
             try {
                 const token = localStorage.getItem('token');
@@ -91,6 +113,7 @@ export default {
             :timestamp="message.timestamp"
             :attachment="message.attachment"
             @download-attachment="handleDownloadAttachment"
+            @delete-message="handleDeleteMessage"
         />
     </div>
 </template>
