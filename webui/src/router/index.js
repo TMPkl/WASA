@@ -3,6 +3,8 @@ import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import ConversationView from '../views/ConversationView.vue'
+
+import ConversationMessagesView from '../views/ConversationMessagesView.vue'
 import { isLoggedIn } from '../services/auth.js'
 
 const routes = [
@@ -10,6 +12,7 @@ const routes = [
 	{ path: '/login', component: LoginView },
 	{ path: '/profile', component: ProfileView },
 	{ path: '/conversations', component: ConversationView },
+	{ path: '/conversation/:id', component: ConversationMessagesView, props: true },
 ]
 
 const router = createRouter({
