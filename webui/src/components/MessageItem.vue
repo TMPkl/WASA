@@ -11,14 +11,14 @@ export default {
 </script>
 
     <template>
-        <div class="d-flex flex-column p-2 border-bottom m-2 bg-light rounded-3">
+        <div class="d-flex flex-column p-2 border-bottom m-2 bg-light rounded-3 overflow-x-hidden">
             <div class="d-flex justify-content-between"> 
             <div class="p-2  small ">{{ sender }}</div>
             
             <div v-if="attachment" class="p-2">
                 <button class="btn btn-sm btn-success">Pobierz załącznik</button> 
             </div>
-        <div class="p-2 small ">{{ timestamp }}</div>   
+        <div class="p-2 small ">{{ timestamp}}</div>   
         </div>
             <div class=" p-2 Large">{{ content }}</div>        
         </div>

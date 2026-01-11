@@ -36,7 +36,7 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.POST("/groups/:groupId/photo", rt.UpdateGroupPhoto)
 
 	rt.router.GET("/conversations/:username", rt.GetMyConversations)
-	rt.router.GET("/conversation/:conversationId", rt.GetConversation)
+	rt.router.POST("/conversation/:conversationId", rt.GetConversation)
 
 	//test
 	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

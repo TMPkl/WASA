@@ -47,9 +47,15 @@ func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap atta
 		Status:         "sent",
 		ConversationID: ConvID,
 	}
-	attachmentsData, err := ap.ConvertToGOB()
-	if err != nil {
-		return Message{}, fmt.Errorf("Failed to convert attachments to GOB: %w", err)
+	var attachmentsData []byte
+	if ap.IsEmpty() {
+		attachmentsData = nil
+	} else {
+		var err error
+		attachmentsData, err = ap.ConvertToGOB()
+		if err != nil {
+			return Message{}, fmt.Errorf("Failed to convert attachments to GOB: %w", err)
+		}
 	}
 	message.Attachment = attachmentsData
 

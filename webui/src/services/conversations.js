@@ -16,7 +16,7 @@ export async function getConversations() {
   const claims = decodeToken(token)
   const username = claims && claims.sub ? claims.sub : ''
   if (!username) throw new Error('No username in token')
-  
+  localStorage.setItem('username', username)
   const res = await axios.get(`/conversations/${username}`)
   return res.data
 }

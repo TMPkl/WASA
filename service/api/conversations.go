@@ -95,6 +95,14 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 
+	// Get conversation type
+	convType, err := rt.db.GetConversationType(conversationID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get conversation type: %v", err), http.StatusInternalServerError)
+		return
+	}
+	isGroup := convType == "group"
+
 	// Get conversation participants
 	participants, err := rt.db.GetConversationParticipants(conversationID)
 	if err != nil {
@@ -127,6 +135,7 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 
 	type ConversationResponse struct {
 		ID           uint              `json:"conversation_id"`
+		IsGroup      bool              `json:"is_group"`
 		Participants []string          `json:"participants"`
 		Messages     []MessageResponse `json:"messages"`
 	}
@@ -156,6 +165,7 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 
 	response := ConversationResponse{
 		ID:           conversationID,
+		IsGroup:      isGroup,
 		Participants: participants,
 		Messages:     messageResponses,
 	}

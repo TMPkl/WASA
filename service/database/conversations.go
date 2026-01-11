@@ -118,6 +118,16 @@ func (db *appdbimpl) GetAllConIDsForUser(username string) ([]uint, error) {
 	return conversationIDs, nil
 }
 
+// GetConversationType retrieves the type of a conversation ("private" or "group")
+func (db *appdbimpl) GetConversationType(conversationID uint) (string, error) {
+	var convType string
+	err := db.c.QueryRow(`SELECT type FROM Conversations WHERE id = ?`, conversationID).Scan(&convType)
+	if err != nil {
+		return "", fmt.Errorf("failed to get conversation type: %w", err)
+	}
+	return convType, nil
+}
+
 // GetConversationParticipants retrieves all usernames participating in a conversation
 func (db *appdbimpl) GetConversationParticipants(conversationID uint) ([]string, error) {
 	// First check the conversation type
