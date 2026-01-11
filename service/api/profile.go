@@ -9,6 +9,7 @@ import (
 	"image"
 	"image/jpeg"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/disintegration/imaging"
@@ -153,7 +154,8 @@ func (rt *_router) UpdateMyUsername(w http.ResponseWriter, r *http.Request, ps h
 
 // ###############SetProfilePhoto######################
 func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
-	if err := r.ParseMultipartForm(10 << 10); err != nil {
+	// Allow up to 10 MB uploads
+	if err := r.ParseMultipartForm(10 << 23); err != nil {
 		return nil, errors.New("Error parsing multipart form")
 	}
 
@@ -161,8 +163,9 @@ func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
 	if err != nil {
 		return nil, errors.New("Error retrieving the file from form data")
 	}
-	if header.Size > 5<<10 {
-		return nil, errors.New("File size exceeds the 5MB limit")
+	// Accept files up to 10 MB
+	if header.Size > 10<<23 {
+		return nil, errors.New("File size exceeds the 10MB limit")
 	}
 
 	//1. sprawdz jakie rozszerzenie
@@ -174,7 +177,7 @@ func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
 	_, _ = file.Seek(0, 0)
 
 	mimeType := http.DetectContentType(buffer)
-	if mimeType != "image/jpg" && mimeType != "image/png" {
+	if mimeType != "image/jpeg" && mimeType != "image/png" {
 		return nil, errors.New("Only JPG and PNG files are allowed")
 	}
 
@@ -184,7 +187,7 @@ func (rt *_router) MakePictureFromRequest(r *http.Request) ([]byte, error) {
 		return nil, errors.New("cannot decode image")
 	}
 
-	imaging.CropCenter(img, 200, 200) ///kwadratowwanie potem zaleznei od frontu trzeba dobrac transformacje
+	img = imaging.Resize(img, 200, 200, imaging.Lanczos)
 	//3. return
 
 	buf := new(bytes.Buffer)
@@ -250,4 +253,38 @@ func (rt *_router) SetProfilePhoto(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+func (rt *_router) GetUserProfilePhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	username_photo := ps.ByName("username")
+	if username_photo == "" {
+		rt.baseLogger.Printf("Username is required")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	tokenStr := authHeader[len("Bearer "):]
+	token, err := verifyJWT(tokenStr)
+	if err != nil || token == nil || !token.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	photoData, err := rt.db.GetProfilePhoto(username_photo)
+	if err != nil {
+		rt.baseLogger.Printf(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if photoData == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(photoData)
 }

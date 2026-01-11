@@ -1,6 +1,5 @@
 import axios, { setAuthToken } from './axios.js'
 
-// Decode JWT payload (naive, no signature check) to extract `sub` (username)
 function decodeToken(token) {
   try {
     const payload = token.split('.')[1]
@@ -10,7 +9,7 @@ function decodeToken(token) {
     return null
   }
 }
-
+                                         ///trying my best not to implement get profile, using token to extract username
 export async function getProfile() {
   try {
     const token = localStorage.getItem('token')
@@ -29,7 +28,6 @@ export async function updateUsername(newUsername) {
   const current = claims && claims.sub ? claims.sub : ''
   const payload = { username: current, 'new-username': newUsername }
   const res = await axios.patch('/me/username', payload)
-  // backend returns new token in { token: ... }
   if (res.data && res.data.token) {
     const newToken = res.data.token
     try { localStorage.setItem('token', newToken) } catch (e) {}
@@ -48,6 +46,12 @@ export async function uploadPhoto(file) {
   fd.append('photo', file)
   const res = await axios.post('/me/photo', fd, {
     headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  return res.data
+}
+export async function getUserPhoto(username) {
+  const res = await axios.get(`/users/${encodeURIComponent(username)}/photo`, {
+    responseType: 'blob'
   })
   return res.data
 }

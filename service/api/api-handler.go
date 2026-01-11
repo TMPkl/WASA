@@ -12,6 +12,8 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.PATCH("/me/username", rt.UpdateMyUsername)
 	rt.router.POST("/me/photo", rt.SetProfilePhoto)
 
+	rt.router.GET("/users/:username/photo", rt.GetUserProfilePhoto)
+
 	//Messages endpoints
 	rt.router.POST("/messages", rt.SendMessage)
 	rt.router.DELETE("/messages/:messageId", rt.DeleteMessage)

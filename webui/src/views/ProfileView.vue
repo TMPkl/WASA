@@ -1,11 +1,12 @@
 <script>
-import { getProfile, updateUsername, uploadPhoto } from '../services/profile.js'
+import { getProfile, updateUsername, uploadPhoto, getUserPhoto } from '../services/profile.js'
 import { logout } from '../services/auth.js'
 
 export default {
   data() {
     return {
       username: '',
+        userPhotoUrl: null,
       newUsername: '',
       errormsg: null,
       loading: false,
@@ -20,10 +21,26 @@ export default {
       try {
         const p = await getProfile()
         this.username = p && p.username ? p.username : ''
+        // load user photo blob asynchronously
+        await this.loadUserPhoto()
       } catch (e) {
         this.errormsg = String(e)
       }
       this.loading = false
+    },
+    async loadUserPhoto() {
+      // clear previous
+      if (this.userPhotoUrl) {
+        try { URL.revokeObjectURL(this.userPhotoUrl) } catch (e) {}
+        this.userPhotoUrl = null
+      }
+      if (!this.username) return
+      try {
+        const blob = await getUserPhoto(this.username)
+        if (blob) this.userPhotoUrl = URL.createObjectURL(blob)
+      } catch (e) {
+        // ignore missing photo
+      }
     },
     async changeUsername() {
       if (!this.newUsername) return
@@ -48,6 +65,7 @@ export default {
       try {
         await uploadPhoto(this.photoFile)
         this.success = 'Photo uploaded'
+        await this.loadUserPhoto()
       } catch (e) {
         this.errormsg = (e.response && e.response.data) || e.message || String(e)
       }
@@ -87,6 +105,15 @@ export default {
         <input type="file" accept="image/*" @change="handleFile" />
         <div class="mt-2">
           <button class="btn btn-secondary" :disabled="!photoFile || loading" @click="submitPhoto">Upload photo</button>
+        </div>
+      </div>
+      <div class="my-photo">
+        <label class="form-label">My current photo</label>
+        <div v-if="userPhotoUrl">
+          <img :src="userPhotoUrl" alt="Profile Photo" style="max-width:200px; max-height:200px;" />
+        </div>
+        <div v-else>
+          <p>No photo available.</p>
         </div>
       </div>
 

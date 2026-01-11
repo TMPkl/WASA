@@ -47,6 +47,7 @@ type AppDatabase interface {
 	AddNewUser(username string) error
 	UpdateUsername(oldUsername, newUsername string) error
 	AddProfilePhoto(username string, photoData []byte) error
+	GetProfilePhoto(username string) ([]byte, error)
 
 	DoesUsersOwnConversation(unA string, unB string) (uint, error)
 	CreatePrivateConversation(username1 string, username2 string) (uint, error)
