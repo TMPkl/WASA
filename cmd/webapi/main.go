@@ -28,7 +28,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,7 +35,6 @@ import (
 
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/api"
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database"
-	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/globaltime"
 	"github.com/ardanlabs/conf"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
@@ -60,7 +58,6 @@ func main() {
 // * waits for any termination event: SIGTERM signal (UNIX), non-recoverable server error, etc.
 // * closes the principal web server
 func run() error {
-	rand.Seed(globaltime.Now().UnixNano())
 	// Load Configuration and defaults
 	cfg, err := loadConfiguration()
 	if err != nil {

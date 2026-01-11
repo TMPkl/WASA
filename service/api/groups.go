@@ -103,7 +103,7 @@ func (rt *_router) AddGroupMember(w http.ResponseWriter, r *http.Request, ps htt
 		http.Error(w, fmt.Sprintf("error checking if user exists: %v", err), http.StatusInternalServerError)
 		return
 	}
-	if DoesUserEx != true {
+	if !DoesUserEx {
 		http.Error(w, "user to add does not exist", http.StatusBadRequest)
 		return
 	}
