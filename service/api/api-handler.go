@@ -37,7 +37,7 @@ func (rt *_router) Handler() http.Handler {
 
 	rt.router.GET("/conversations/:username", rt.GetMyConversations)
 	rt.router.POST("/conversation/:conversationId", rt.GetConversation)
-
+	rt.router.POST("/attachments/:messageId", rt.GetAttachmentFromMessage)
 	//test
 	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// 	data, err := rt.readFileFromRequest(r)

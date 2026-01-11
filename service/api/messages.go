@@ -52,7 +52,7 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	rqst.Content = r.FormValue("content")
 	rqst.ReciverUsername = r.FormValue("receiverUsername")
 
-	if rqst.Content == "" {
+	if rqst.Content == "" && len(r.MultipartForm.File["attachments"]) == 0 {
 		rt.baseLogger.Printf("Message content is required")
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -485,4 +485,40 @@ func (rt *_router) GetMessageAttachments(w http.ResponseWriter, r *http.Request,
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
+}
+func (rt *_router) GetAttachmentFromMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	messageID := ps.ByName("messageId")
+	if messageID == "" {
+		http.Error(w, "message ID is required", http.StatusBadRequest)
+		return
+	}
+
+	attachmentData, err := rt.db.GetAttachmentFromMessage(atoi(messageID))
+	if err != nil {
+		http.Error(w, "failed to get attachment from message", http.StatusInternalServerError)
+		return
+	}
+
+	if len(attachmentData) == 0 {
+		http.Error(w, "no attachments found", http.StatusNotFound)
+		return
+	}
+	// decodie
+	attachmentsPack, err := attachments.DecodeFromGOB(attachmentData)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to decode attachments: %v", err)
+		http.Error(w, "failed to decode attachments", http.StatusInternalServerError)
+		return
+	}
+
+	if attachmentsPack.IsEmpty() {
+		http.Error(w, "no attachments found", http.StatusNotFound)
+		return
+	}
+
+	att := attachmentsPack.Attachments[0]
+	w.Header().Set("Content-Type", att.Type)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"attachment_%s\"", messageID))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(att.Content)
 }
