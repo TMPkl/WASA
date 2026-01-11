@@ -325,3 +325,11 @@ func (db *appdbimpl) GetConversationHistory(conversationID uint, limit int) ([]M
 
 	return messages, nil
 }
+func (db *appdbimpl) GetAttachmentFromMessage(messageID int) ([]byte, error) {
+	var attachmentData []byte
+	err := db.c.QueryRow("SELECT attachment FROM Messages WHERE id = ?", messageID).Scan(&attachmentData)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get attachment from message: %w", err)
+	}
+	return attachmentData, nil
+}

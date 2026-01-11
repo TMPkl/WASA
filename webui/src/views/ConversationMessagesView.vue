@@ -1,11 +1,13 @@
 <script>
 import MessageView from './MessageView.vue';
+import MessageInputForm from '../components/MessageInputForm.vue';
 import axios from 'axios';
 
 export default {
   name: 'ConversationMessagesView',
   components: {
-    MessageView
+    MessageView,
+    MessageInputForm
   },
   props: ['id'],
   data() {
@@ -15,6 +17,7 @@ export default {
       error: null,
       conversationName: '',
       isGroup: false,
+      sending: false,
     };
   },
   async mounted() {
@@ -63,6 +66,95 @@ export default {
       this.loading = false;
     }
   },
+  methods: {
+    async handleSendMessage({ content, files }) {
+      this.sending = true;
+      try {
+        const token = localStorage.getItem('token');
+        const username = localStorage.getItem('username');
+        
+        const formData = new FormData();
+        formData.append('senderUsername', username);
+        formData.append('content', content);
+        
+        // For group conversations, we need to handle differently
+        // For now, we'll use the first other participant
+        const currentUser = localStorage.getItem('username');
+        const otherUser = this.isGroup 
+          ? '' // Groups might need different handling
+          : (await this.getOtherParticipant(currentUser));
+        
+        if (!this.isGroup) {
+          formData.append('receiverUsername', otherUser);
+        }
+        
+        // Add attachments
+        for (const file of files) {
+          formData.append('attachments', file);
+        }
+
+        await axios({
+          method: 'post',
+          url: `${__API_URL__}/messages`,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          data: formData
+        });
+
+        // Clear form via ref
+        this.$refs.messageForm.clearForm();
+        
+        // Reload messages
+        await this.loadMessages();
+      } catch (e) {
+        this.error = e?.response?.data?.error || e.message || 'Failed to send message';
+      } finally {
+        this.sending = false;
+      }
+    },
+    async getOtherParticipant(currentUser) {
+      // This should be stored from the initial load
+      const token = localStorage.getItem('token');
+      const res = await axios({
+        method: 'post',
+        url: `${__API_URL__}/conversation/${this.id}`,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        data: {
+          username: currentUser,
+          message_quantity: 1
+        }
+      });
+      return res.data.participants?.find(p => p !== currentUser) || '';
+    },
+    async loadMessages() {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+      const res = await axios({
+        method: 'post',
+        url: `${__API_URL__}/conversation/${this.id}`,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        data: {
+          username: username,
+          message_quantity: 50
+        }
+      });
+      
+      this.messages = res.data.messages.map(msg => ({
+        id: msg.id,
+        sender: msg.sender_username,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        attachment: msg.has_attachment
+      }));
+    }
+  }
 }
 </script>
 
@@ -74,26 +166,17 @@ export default {
     </div>
 
     <div class="messages flex-grow-1 mb-2">
-      <div v-if="loading">Ładowanie wiadomości...</div>
+      <div v-if="loading">Loading...</div>
       <div v-else-if="error" class="text-danger">{{ error }}</div>
       <MessageView v-else :messages="messages" />
     </div>
 
-    <div class="flex-shrink-0">
-      <form class="d-flex">
-        <input
-          type="text"
-          class="form-control me-2"
-          placeholder="Write a message..."
-        />
-        <button type="submit" class="btn btn-primary">Send</button>
-        <button type="button" class="btn btn-secondary ms-2">Attach</button>
-        <div v-if="isGroup" class="align-self-center d-flex">
-            <button type="button" class="btn btn-info ms-2">Add User</button>
-            <button type="button" class="btn btn-danger ms-2">Leave Group</button>
-        </div>
-      </form>
-    </div>
+    <MessageInputForm
+      ref="messageForm"
+      :is-group="isGroup"
+      :sending="sending"
+      @send-message="handleSendMessage"
+    />
 
   </div>
 </template>

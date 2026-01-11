@@ -80,6 +80,7 @@ type AppDatabase interface {
 	GetConversationParticipants(conversationID uint) ([]string, error)
 
 	GetConversationType(conversationID uint) (string, error)
+	GetAttachmentFromMessage(messageID int) ([]byte, error)
 }
 
 type appdbimpl struct {

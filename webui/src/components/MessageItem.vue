@@ -2,10 +2,16 @@
 export default {
   name: 'MessageItem',
   props: {
+    messageId: [String, Number],
     sender: String,
     content: String,
     timestamp: String,
-    attachment: Boolean //jesli bedzie attachment to dodaj przycisk do pobrania go
+    attachment: Boolean
+  },
+  methods: {
+    downloadAttachments() {
+      this.$emit('download-attachment', this.messageId);
+    }
   }
 }
 </script>
@@ -16,7 +22,7 @@ export default {
             <div class="p-2  small ">{{ sender }}</div>
             
             <div v-if="attachment" class="p-2">
-                <button class="btn btn-sm btn-success">Pobierz załącznik</button> 
+                <button class="btn btn-sm btn-success" @click="downloadAttachments">Download Attachments</button> 
             </div>
         <div class="p-2 small ">{{ timestamp}}</div>   
         </div>
