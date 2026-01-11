@@ -1,18 +1,23 @@
 <script>
+import defaultPhoto from '../assets/account_icon_400x400.png';
+import UserPhoto from './UserPhoto.vue';
 export default {
   name: 'ContactItem',
   props: {
     title: String,
     lastMessage: String,
     time: String,
-    status: String
+    status: String,
   }
 }
 </script>
 
 <template>
   <div class="d-flex p-3  text-muted border-bottom align-items-center justify-content-between">
-  <div class="p-3 bg-light  flex-grow-1 rounded-3">
+    <div class="photo">
+      <img src="/account_icon_400x400.png" alt="Avatar" class="rounded-circle" width="100" height="100" />
+    </div>
+    <div class="p-3 bg-light  flex-grow-1 rounded-3">
     <div class="fw-bold">{{ title }}</div>
     <div class="text-dark">{{ lastMessage }}</div>
   </div>
