@@ -2,12 +2,14 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import ConversationView from '../views/ConversationView.vue'
 import { isLoggedIn } from '../services/auth.js'
 
 const routes = [
 	{ path: '/', component: HomeView },
 	{ path: '/login', component: LoginView },
 	{ path: '/profile', component: ProfileView },
+	{ path: '/conversations', component: ConversationView },
 ]
 
 const router = createRouter({
