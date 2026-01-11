@@ -1,4 +1,5 @@
 <script>
+import { logout } from '../services/auth.js'
 export default {
 	data: function() {
 		return {
@@ -19,7 +20,11 @@ export default {
 			}
 			this.loading = false;
 		},
-	},
+		},
+		logout() {
+			logout()
+			this.$router.replace('/login')
+		},
 	mounted() {
 		this.refresh()
 	}
@@ -37,7 +42,7 @@ export default {
 						<span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
 						Refresh
 					</button>
-					<button type="button" class="logout-btn btn-bg  me-2" :disabled="loading">
+					<button type="button" class="logout-btn btn-bg  me-2" :disabled="loading" @click="logout">
 						Logout
 					</button>
 				

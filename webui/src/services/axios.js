@@ -13,6 +13,7 @@ export function setAuthToken(token) {
 	}
 }
 
+
 try {
 	const token = localStorage.getItem('token');
 	if (token) setAuthToken(token);
