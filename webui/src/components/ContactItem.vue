@@ -11,19 +11,19 @@ export default {
 </script>
 
 <template>
-  <div class="list-group-item">
+  <div class="d-flex p-3  text-muted border-bottom align-items-center justify-content-between">
+  <div class="p-3 bg-light  flex-grow-1 rounded-3">
     <div class="fw-bold">{{ title }}</div>
-    <small class="text-muted">{{ lastMessage }}</small>
-      <div class = "list-group-item-extra text-end">
-        <div class="text-muted">{{ time }}</div>
-        <div class="text-muted">{{ status }}</div>
-      </div>
+    <div class="text-dark">{{ lastMessage }}</div>
   </div>
-  <div class="d-flex p-3 bg-primary text-white">
-  <div class="p-2 bg-info">Flex item 1</div>
-    <div class="d-flex flex-column">
-      <div class="p-2 bg-info">Flex item 1</div>
-      <div class="p-2 bg-warning">Flex item 2</div>
+    <div class="d-flex flex-column bg-light rounded-3">
+      <div class="p-2 text-end">
+        <div class="text-muted">{{ time }}</div>
+        
+      </div>
+      <div class="p-2 ">
+        <div class="fw-bold">{{ status }}</div>
+      </div>
     </div>
 </div>
 </template>
