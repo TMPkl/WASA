@@ -1,12 +1,17 @@
 <script>
 import { getProfile, updateUsername, uploadPhoto, getUserPhoto } from '../services/profile.js'
 import { logout } from '../services/auth.js'
+import defaultPhoto from '@/assets/account_icon_400x400.png'
+import UserPhoto from '@/components/UserPhoto.vue'
+
 
 export default {
+    components: { UserPhoto },
   data() {
     return {
       username: '',
-        userPhotoUrl: null,
+      userPhotoUrl: null,
+      defaultPhoto,
       newUsername: '',
       errormsg: null,
       loading: false,
@@ -101,19 +106,35 @@ export default {
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Profile photo</label>
-        <input type="file" accept="image/*" @change="handleFile" />
-        <div class="mt-2">
-          <button class="btn btn-secondary" :disabled="!photoFile || loading" @click="submitPhoto">Upload photo</button>
-        </div>
+        <div class="mb-3">
+  <label class="form-label">Profile photo</label>
+
+  <div class="input-group">
+    <input
+      type="file"
+      class="form-control"
+      accept="image/*"
+      @change="handleFile"
+    />
+    <button
+      class="btn btn-secondary"
+      :disabled="!photoFile || loading"
+      @click="submitPhoto"
+    >
+      Upload
+    </button>
+  </div>
+
+  <small v-if="photoFile" class="text-muted">
+    Selected: {{ photoFile.name }}
+  </small>
+</div>
+
       </div>
-      <div class="my-photo">
-        <label class="form-label">My current photo</label>
-        <div v-if="userPhotoUrl">
-          <img :src="userPhotoUrl" alt="Profile Photo" style="max-width:200px; max-height:200px;" />
-        </div>
-        <div v-else>
-          <p>No photo available.</p>
+      <div class="photo-label ">
+        <label class="">My current photo</label>
+        <div class="photo-wrapper">
+          <UserPhoto :username="username" :size="200" />
         </div>
       </div>
 
@@ -126,4 +147,23 @@ export default {
 
 <style scoped>
 .profile-view .card { font-size: 1rem }
+.photo-label { display: block; font-size: 2rem;
+            font-weight: bold;
+            justify-content: center;
+            
+            }
+
+.photo-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.photo-wrapper img,
+.photo-wrapper > * {
+  max-width: 200px;
+  max-height: 200px;
+  width: 100%;
+  height: auto;
+}
 </style>
