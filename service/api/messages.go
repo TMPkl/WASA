@@ -2,8 +2,10 @@ package api
 
 //################file for endpoints form tag messages##########
 import (
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -52,7 +54,6 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	rqst.Content = r.FormValue("content")
 	rqst.ReciverUsername = r.FormValue("receiverUsername")
 
-	// Parse conversationId from form
 	conversationIdStr := r.FormValue("conversationId")
 	if conversationIdStr != "" {
 		_, err := fmt.Sscanf(conversationIdStr, "%d", &rqst.ConversationID)
@@ -69,11 +70,23 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 
-	czyJestGrupa, err := rt.db.IsConversationGroup(uint(rqst.ConversationID))
-	if err != nil {
-		rt.baseLogger.Printf("Failed to check if conversation is group: %s", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	var czyJestGrupa bool
+	if rqst.ConversationID == 0 {
+		// No conversation ID provided — this is a new/private conversation flow
+		czyJestGrupa = false
+	} else {
+		var err error
+		czyJestGrupa, err = rt.db.IsConversationGroup(uint(rqst.ConversationID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				rt.baseLogger.Printf("Conversation not found: %s", err.Error())
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			rt.baseLogger.Printf("Failed to check if conversation is group: %s", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if rqst.ReciverUsername == "" && !czyJestGrupa {
@@ -471,14 +484,12 @@ func (rt *_router) GetMessageAttachments(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	// Get username from query parameter for authorization
 	username := r.URL.Query().Get("username")
 	if username == "" {
 		http.Error(w, "username is required", http.StatusBadRequest)
 		return
 	}
 
-	// Authorize user
 	authorised, err := rt.Authorise(w, r, username)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusUnauthorized)
@@ -489,7 +500,6 @@ func (rt *_router) GetMessageAttachments(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	// Get the message from database
 	message, err := rt.db.GetMessageByID(messageID)
 	if err != nil {
 		rt.baseLogger.Printf("Failed to get message by ID %s: %v", messageID, err)
@@ -497,7 +507,6 @@ func (rt *_router) GetMessageAttachments(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	// Verify user is in the conversation
 	isInConv, err := rt.db.UserInConversation(username, message.ConversationID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to verify user in conversation: %v", err), http.StatusInternalServerError)
