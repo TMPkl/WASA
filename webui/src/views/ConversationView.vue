@@ -66,8 +66,16 @@ export default {
 </script>
 
 <template>
+  <div style ="height: 40px;"> 
+    <!-- i KNOW it is bad idea to use inline styles for spaing but this is a quik fix -->
+  </div>
   <div class="conversation-view">
-    <h2>Conversations</h2>
+    <div class="d-flex align-items-center mb-3">
+      <h2>Conversations</h2>
+      <button class="btn btn-primary ms-auto" @click="loadConversations" :disabled="loading">
+        Create New Conversation
+      </button>
+    </div>
     <div v-if="loading">Loading...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <ContactForm v-else :conversations="conversations" />

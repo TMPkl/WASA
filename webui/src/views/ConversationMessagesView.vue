@@ -44,7 +44,7 @@ export default {
       console.log('API response:', res.data);
       //{ conversation_id, is_group, participants, messages: [ { id, sender_username, content, timestamp, has_attachment } ] }
       this.isGroup = res.data.is_group || false;
-      this.messages = res.data.messages.map(msg => ({
+      this.messages = (res.data.messages || []).map(msg => ({
         id: msg.id,
         sender: msg.sender_username,
         content: msg.content,
@@ -76,6 +76,7 @@ export default {
         const formData = new FormData();
         formData.append('senderUsername', username);
         formData.append('content', content);
+        formData.append('conversationId', this.id);
         
         // For group conversations, we need to handle differently
         // For now, we'll use the first other participant
@@ -146,7 +147,7 @@ export default {
         }
       });
       
-      this.messages = res.data.messages.map(msg => ({
+      this.messages = (res.data.messages || []).map(msg => ({
         id: msg.id,
         sender: msg.sender_username,
         content: msg.content,

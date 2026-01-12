@@ -14,6 +14,35 @@ export default {
         }
     },
     methods: {
+        async forwardMessage(messageId) {
+            const conversationId = prompt('Enter the conversation ID to forward this message to:');
+            
+            if (!conversationId) {
+                return;
+            }
+            
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+            
+            try {
+                await axios({
+                    method: 'post',
+                    url: `${__API_URL__}/messages/${messageId}/forwards`,
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    data: {
+                        username: username,
+                        addressingConversationID: parseInt(conversationId)
+                    }
+                });
+                alert('Message forwarded successfully!');
+            } catch (e) {
+                console.error('Failed to forward message:', e);
+                alert('Failed to forward message: ' + (e?.response?.data?.error || e.message));
+            }
+        },
         async handleDeleteMessage(messageId) {
             const token = localStorage.getItem('token');
             const username = localStorage.getItem('username');
@@ -50,7 +79,6 @@ export default {
                     responseType: 'blob'
                 });
 
-                // Get filename from Content-Disposition header or use default
                 const contentDisposition = response.headers['content-disposition'];
                 let filename = `attachment_${messageId}`;
                 
@@ -61,7 +89,7 @@ export default {
                     }
                 }
 
-                // Determine file extension from content type
+                
                 const contentType = response.headers['content-type'];
                 if (contentType && !filename.includes('.')) {
                     const ext = this.getExtensionFromMimeType(contentType);
@@ -70,7 +98,6 @@ export default {
                     }
                 }
 
-                // Create blob link to download
                 const url = window.URL.createObjectURL(new Blob([response.data]));
                 const link = document.createElement('a');
                 link.href = url;
@@ -104,7 +131,11 @@ export default {
 </script>
 <template>
     <div class="message-view">
+        <div v-if="messages.length === 0" class="text-center text-muted p-4">
+            No messages here yet
+        </div>
         <MessageItem
+            v-else
             v-for="message in messages"
             :key="message.id"
             :message-id="message.id"
@@ -114,6 +145,7 @@ export default {
             :attachment="message.attachment"
             @download-attachment="handleDownloadAttachment"
             @delete-message="handleDeleteMessage"
+            @forward-message="forwardMessage"
         />
     </div>
 </template>

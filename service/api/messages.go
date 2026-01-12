@@ -52,16 +52,82 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	rqst.Content = r.FormValue("content")
 	rqst.ReciverUsername = r.FormValue("receiverUsername")
 
+	// Parse conversationId from form
+	conversationIdStr := r.FormValue("conversationId")
+	if conversationIdStr != "" {
+		_, err := fmt.Sscanf(conversationIdStr, "%d", &rqst.ConversationID)
+		if err != nil {
+			rt.baseLogger.Printf("Invalid conversationId: %s", err.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
 	if rqst.Content == "" && len(r.MultipartForm.File["attachments"]) == 0 {
 		rt.baseLogger.Printf("Message content is required")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if rqst.ReciverUsername == "" {
+	czyJestGrupa, err := rt.db.IsConversationGroup(uint(rqst.ConversationID))
+	if err != nil {
+		rt.baseLogger.Printf("Failed to check if conversation is group: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if rqst.ReciverUsername == "" && !czyJestGrupa {
 		rt.baseLogger.Printf("Receiver username is required")
 		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	if czyJestGrupa {
+		var attachmentsPack attachments.AttachmentsPack
+		files := r.MultipartForm.File["attachments"]
+		for _, fileHeader := range files {
+			file, err := fileHeader.Open()
+			if err != nil {
+				rt.baseLogger.Printf("Failed to open attachment: %s", err.Error())
+				continue
+			}
+			defer file.Close()
+
+			content := make([]byte, fileHeader.Size)
+			_, err = file.Read(content)
+			if err != nil {
+				rt.baseLogger.Printf("Failed to read attachment: %s", err.Error())
+				continue
+			}
+
+			attachment := attachments.NewAttachment(content)
+			attachmentsPack.Attachments = append(attachmentsPack.Attachments, attachment)
+		}
+
+		message, err := rt.db.SaveMessage(rqst.SenderUsername, rqst.Content, attachmentsPack, uint(rqst.ConversationID))
+		if err != nil {
+			rt.baseLogger.Printf("Failed to save message: %s", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Return success response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+
+		response := map[string]interface{}{
+			"id":             fmt.Sprintf("%d", message.ID),
+			"senderId":       message.SenderUsername,
+			"content":        message.Content,
+			"conversationId": fmt.Sprintf("%d", rqst.ConversationID),
+			"timestamp":      message.Timestamp.Format("2022-01-02T15:04:05Z07:00"),
+		}
+
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			rt.baseLogger.Printf("Failed to encode response: %s", err.Error())
+		}
+
 	}
 
 	// check if conversation exists

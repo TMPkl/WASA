@@ -78,6 +78,7 @@ type AppDatabase interface {
 	GetAllConIDsForUser(username string) ([]uint, error)
 	GetConversationHistory(conversationID uint, limit int) ([]Message, error)
 	GetConversationParticipants(conversationID uint) ([]string, error)
+	IsConversationGroup(conversationID uint) (bool, error)
 
 	GetConversationType(conversationID uint) (string, error)
 	GetAttachmentFromMessage(messageID int) ([]byte, error)

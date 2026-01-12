@@ -190,3 +190,13 @@ func (db *appdbimpl) GetConversationParticipants(conversationID uint) ([]string,
 
 	return participants, nil
 }
+
+// isConversationGroup
+func (db *appdbimpl) IsConversationGroup(conversationID uint) (bool, error) {
+	var convType string
+	err := db.c.QueryRow(`SELECT type FROM Conversations WHERE id = ?`, conversationID).Scan(&convType)
+	if err != nil {
+		return false, fmt.Errorf("failed to get conversation type: %w", err)
+	}
+	return convType == "group", nil
+}
