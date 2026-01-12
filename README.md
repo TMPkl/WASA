@@ -43,3 +43,25 @@ napisac ze na moje male potrzeby zapisuje zdjecia w bazie jako bloby ale wiem ze
 napisac ze obrabiam zdjecia tak aby byly zapisywane jako kwadraty 200x200px latwe do odczytu i wyslania potel do frontu i ze uzywam do tego biblioteki imaging
 
 Napisac ze czasami endpointy oczekuja requestow w formiacie JSON a czasami dajko form-data kiedy sa przesylane pliki i ze to jest opisane w api.yaml i ze frontend to obsluguje albo bardzije bedzie obslugiwac 
+
+## 4. Docker
+The application is containerized using Docker. The `Dockerfile.backend` and `Dockerfile.frontend` files are used to build the backend and frontend images, respectively.
+
+1. TO build the frontend image, run:
+    ```
+    docker build -t wasatext-frontend:latest -f Dockerfile.frontend .
+    ```
+    to run it locally:
+    ```
+    docker run -it -p 8080:2137 --rm wasatext-frontend:latest
+    ```
+2. To build the backend image, run:
+    ```
+    docker build -t wasatext-backend:latest -f Dockerfile.backend .
+    ```
+    to run it locally:
+    ```
+    docker run -it -p 8081:3000 --rm wasatext-backend:latest
+    ```
+    Remember to set correct ports in order to connect frontend with backend!
+    I didnt set cuz docker is only for grading purposes. If I were to host it somewhere, I would use docker-compose to manage both containers and their networking.
