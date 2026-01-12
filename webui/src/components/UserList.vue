@@ -1,0 +1,105 @@
+<template>
+  <div>
+    <teleport to="body">
+      <div
+        class="modal fade"
+        :class="{ show: showModal }"
+        style="display: block;"
+        tabindex="-1"
+        role="dialog"
+        v-if="showModal"
+      >
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Wybierz element</h5>
+              <button type="button" class="btn-close" @click="showModal = false"></button>
+            </div>
+            <div class="modal-body">
+              <div class="d-flex flex-column gap-2">
+                <input 
+                  type="text" 
+                  class="form-control mb-3" 
+                  placeholder="Search user..." 
+                  v-model="searchQuery" 
+                />
+
+                <ul class="list-group overflow-auto" style="max-height: 400px; cursor: pointer;">
+                  <li 
+                    v-for="item in filteredItems"
+                    :key="(item && (item.id || item.username || item.name)) || item"
+                    class="list-group-item"
+                    @click="selectItem(item)"
+                  >
+                    {{ (item && (item.name || item.username)) || item }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="showModal" class="modal-backdrop fade show"></div>
+    </teleport>
+  </div>
+</template>
+
+<script>
+import axios from 'axios';
+
+export default {
+  props: {
+    items: {
+      type: Array,
+      required: false,
+      default: () => []
+    }
+  },
+  data() {
+    return {
+      showModal: false,
+      searchQuery: '',
+      itemsInternal: [],
+      loading: false,
+      error: null
+    }
+  },
+  computed: {
+    filteredItems() {
+      const list = (this.itemsInternal && this.itemsInternal.length) ? this.itemsInternal : this.items;
+      if (!this.searchQuery) return list;
+      return list.filter(item =>
+        (String((item && (item.name || item.username)) || item)).toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
+    }
+  },
+  methods: {
+    async open() {
+      this.error = null;
+      this.loading = true;
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios({
+          method: 'get',
+          url: `${__API_URL__}/users`,
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        this.itemsInternal = Array.isArray(res.data) ? res.data : (res.data.users || []);
+      } catch (e) {
+        this.itemsInternal = [];
+        this.error = e?.response?.data?.error || e.message || 'Failed to load users';
+        console.warn('UserList.open: could not fetch users', e);
+      } finally {
+        this.loading = false;
+        this.showModal = true;
+      }
+    },
+    async selectItem(item) {
+      const username = (item && (item.username || item.name)) || item;
+      this.$emit('select', username, item);
+      this.showModal = false;
+    }
+  }
+}
+</script>

@@ -58,10 +58,8 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 
 	conversationIDStr := ps.ByName("conversationId")
 	if conversationIDStr == "" {
-		// fallback to query param if path param missing
 		conversationIDStr = r.URL.Query().Get("conversationId")
 	}
-	// Convert conversationIDStr to uint
 	var conversationID uint
 	_, err := fmt.Sscanf(conversationIDStr, "%d", &conversationID)
 	if err != nil {
@@ -122,7 +120,6 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 
-	// Build response
 	type MessageResponse struct {
 		ID             int64    `json:"id"`
 		SenderUsername string   `json:"sender_username"`
@@ -136,13 +133,13 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 	type ConversationResponse struct {
 		ID           uint              `json:"conversation_id"`
 		IsGroup      bool              `json:"is_group"`
+		GroupID      uint              `json:"group_id,omitempty"`
 		Participants []string          `json:"participants"`
 		Messages     []MessageResponse `json:"messages"`
 	}
 
 	var messageResponses []MessageResponse
 	for _, msg := range messages {
-		// Get reactions for this message
 		reactionIDs, _ := rt.db.GetReactionsID(int(msg.ID))
 		reactions := []string{}
 		for _, reactionID := range reactionIDs {
@@ -170,12 +167,54 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 		Messages:     messageResponses,
 	}
 
+	if isGroup {
+		if gid, err := rt.db.GetGroupIDByConversationID(conversationID); err == nil {
+			response.GroupID = gid
+		}
+	}
+
 	data, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+func (rt *_router) GetAllMyConversations(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	type rqst struct {
+		Username string `json:"username"`
+	}
+
+	var request rqst
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	authorised, err := rt.Authorise(w, r, request.Username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("authorization error: %v", err), http.StatusUnauthorized)
+		return
+	}
+	if !authorised {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	conversations, err := rt.db.GetAllConversations(request.Username)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get conversations: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	data, err := json.Marshal(conversations)
+	if err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)

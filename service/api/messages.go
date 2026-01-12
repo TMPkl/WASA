@@ -307,16 +307,19 @@ func (rt *_router) ForwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 	var NewMessage SendMessageRequest
 	NewMessage.Content = forwardedMessage.Content
 	NewMessage.ConversationID = int(rqst.AddressingConversationID)
-	apPtr, err := attachments.DecodeFromGOB(forwardedMessage.Attachment)
-	if err != nil {
-		rt.baseLogger.Printf("Failed to decode attachments: %s", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if apPtr != nil {
-		NewMessage.Attachmemnts = *apPtr
-	}
 	NewMessage.SenderUsername = rqst.Username
+
+	if len(forwardedMessage.Attachment) > 0 {
+		apPtr, err := attachments.DecodeFromGOB(forwardedMessage.Attachment)
+		if err != nil {
+			rt.baseLogger.Printf("Failed to decode attachments: %s", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if apPtr != nil {
+			NewMessage.Attachmemnts = *apPtr
+		}
+	}
 
 	_, err = rt.db.SaveMessage(NewMessage.SenderUsername, NewMessage.Content, NewMessage.Attachmemnts, uint(NewMessage.ConversationID))
 	if err != nil {

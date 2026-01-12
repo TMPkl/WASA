@@ -1,6 +1,7 @@
 <script>
 import MessageView from './MessageView.vue';
 import MessageInputForm from '../components/MessageInputForm.vue';
+import UserList from '../components/UserList.vue';
 import axios from 'axios';
 
 export default {
@@ -8,6 +9,7 @@ export default {
   components: {
     MessageView,
     MessageInputForm
+    ,UserList
   },
   props: ['id'],
   data() {
@@ -18,6 +20,12 @@ export default {
       conversationName: '',
       isGroup: false,
       sending: false,
+      groupId: null,
+      refreshInterval: null,
+      otherUsername: null,
+      otherUserPhoto: null,
+      users: [],
+      selectedUser: null,
     };
   },
   async mounted() {
@@ -44,27 +52,37 @@ export default {
       console.log('API response:', res.data);
       //{ conversation_id, is_group, participants, messages: [ { id, sender_username, content, timestamp, has_attachment } ] }
       this.isGroup = res.data.is_group || false;
+      this.groupId = res.data.group_id || null;
       this.messages = (res.data.messages || []).map(msg => ({
         id: msg.id,
         sender: msg.sender_username,
         content: msg.content,
         timestamp: msg.timestamp,
-        attachment: msg.has_attachment
-        
+        attachment: msg.has_attachment,
+        reactions: msg.reactions || []
       }));
       if (this.isGroup) {
         this.conversationName = res.data.participants?.join(', ') || `Group ${this.id}`;
       } else {
-        //for priv show the other 
         const currentUser = localStorage.getItem('username');
         const otherUser = res.data.participants?.find(p => p !== currentUser);
+        this.otherUsername = otherUser;
         this.conversationName = otherUser || res.data.participants?.[0] || `Conversation ${this.id}`;
+        if (otherUser) {
+          this.loadUserPhoto(otherUser);
+        }
       }
     } catch (e) {
       this.error = e?.response?.data?.error || e.message || 'Error loading messages';
     } finally {
       this.loading = false;
     }
+
+    this.scrollToBottom();
+    this.startAutoRefresh();
+  },
+  unmounted() {
+    this.stopAutoRefresh();
   },
   methods: {
     async handleSendMessage({ content, files }) {
@@ -78,18 +96,15 @@ export default {
         formData.append('content', content);
         formData.append('conversationId', this.id);
         
-        // For group conversations, we need to handle differently
-        // For now, we'll use the first other participant
         const currentUser = localStorage.getItem('username');
         const otherUser = this.isGroup 
-          ? '' // Groups might need different handling
+          ? ''
           : (await this.getOtherParticipant(currentUser));
         
         if (!this.isGroup) {
           formData.append('receiverUsername', otherUser);
         }
         
-        // Add attachments
         for (const file of files) {
           formData.append('attachments', file);
         }
@@ -103,11 +118,10 @@ export default {
           data: formData
         });
 
-        // Clear form via ref
         this.$refs.messageForm.clearForm();
         
-        // Reload messages
         await this.loadMessages();
+        this.scrollToBottom();
       } catch (e) {
         this.error = e?.response?.data?.error || e.message || 'Failed to send message';
       } finally {
@@ -115,7 +129,6 @@ export default {
       }
     },
     async getOtherParticipant(currentUser) {
-      // This should be stored from the initial load
       const token = localStorage.getItem('token');
       const res = await axios({
         method: 'post',
@@ -152,12 +165,131 @@ export default {
         sender: msg.sender_username,
         content: msg.content,
         timestamp: msg.timestamp,
-        attachment: msg.has_attachment
+        attachment: msg.has_attachment,
+        reactions: msg.reactions || []
       }));
+      this.scrollToBottom();
     },
     handleMessageDeleted(messageId) {
       this.messages = this.messages.filter(msg => msg.id !== messageId);
     }
+    ,
+    openAddUserModal() {
+      if (!this.isGroup) return;
+      this.$nextTick(() => {
+        if (this.$refs.userList && this.$refs.userList.open) this.$refs.userList.open(this.id);
+      });
+    },
+    handleUserSelect(username) {
+      console.log('Selected username:', username);
+      // parent may refresh participants or UI here if desired
+    }
+    ,
+    async handleLeaveGroup() {
+      if (!this.isGroup) return;
+      try {
+        const token = localStorage.getItem('token');
+        let username = localStorage.getItem('username');
+        if (!username && token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+            username = payload.sub || payload.username || payload.name || '';
+            if (username) localStorage.setItem('username', username);
+          } catch (err) {
+            console.warn('Failed to decode token for username', err);
+          }
+        }
+
+        if (!username) {
+          this.error = 'No username available to leave group';
+          console.warn('leave group aborted: no username');
+          return;
+        }
+
+        const targetGroupId = this.groupId || this.id;
+        const url = `${__API_URL__}/groups/${targetGroupId}/members/me`;
+        const headers = token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+        const payload = { username };
+        console.log('Leaving group request', url, payload);
+        // Use axios.delete with config to include request body
+        await axios.delete(url, { headers, data: payload });
+
+        this.$router.push({ path: '/' });
+      } catch (e) {
+        if (e.response) {
+          console.warn('leave group failed', e.response.status, e.response.data);
+          this.error = e.response.data?.error || JSON.stringify(e.response.data) || `Request failed: ${e.response.status}`;
+        } else {
+          this.error = e.message || 'Failed to leave group';
+        }
+      }
+    },
+
+    startAutoRefresh() {
+      this.refreshInterval = setInterval(() => {
+        this.loadMessages();
+      }, 1000);
+    },
+
+    stopAutoRefresh() {
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval);
+        this.refreshInterval = null;
+      }
+    },
+
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const container = this.$refs.messagesContainer;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      });
+    },
+
+    async loadUserPhoto(username) {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios({
+          method: 'get',
+          url: `${__API_URL__}/users/${username}/photo`,
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          responseType: 'blob'
+        });
+        const url = URL.createObjectURL(res.data);
+        this.otherUserPhoto = url;
+      } catch (e) {
+        console.error('Failed to load user photo:', e);
+      }
+    },
+
+    handleSelectUser(username, item) {
+    console.log('Wybrano username:', username);
+    console.log('Wybrany obiekt:', item);
+    const my_username = localStorage.getItem('username');
+    
+    axios.post(`${__API_URL__}/groups/${this.groupId}/members`, {
+      username: my_username,
+      user_to_add: username
+    }, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => {
+      console.log('dodany:', response.data);
+      this.error = null;
+    })
+    .catch(error => {
+      console.error('Błąd:', error.response ? error.response.data : error.message);
+      this.error = error.response?.data || error.message;
+    });
+
+    this.selectedUser = item;
+  }
   }
 }
 </script>
@@ -165,11 +297,14 @@ export default {
 <template>
   <div class="conversation-messages-view d-flex flex-column p-2">
     
-    <div class="p-3 mb-2 bg-secondary text-white rounded-4 flex-shrink-0">
+    <div class="p-3 mb-2 bg-secondary text-white rounded-4 flex-shrink-0 d-flex align-items-center">
+      <div v-if="!isGroup && otherUserPhoto" class="me-3">
+        <img :src="otherUserPhoto" alt="User photo" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover;">
+      </div>
       <h2 class="m-0">{{ conversationName }}</h2>
     </div>
 
-    <div class="messages flex-grow-1 mb-2">
+    <div class="messages flex-grow-1 mb-2" ref="messagesContainer">
       <div v-if="loading">Loading...</div>
       <div v-else-if="error" class="text-danger">{{ error }}</div>
       <MessageView v-else :messages="messages" @message-deleted="handleMessageDeleted" />
@@ -180,7 +315,11 @@ export default {
       :is-group="isGroup"
       :sending="sending"
       @send-message="handleSendMessage"
+      @add-user="openAddUserModal"
+      @leave-group="handleLeaveGroup"
     />
+
+    <UserList ref="userList" :items="users" @select="handleSelectUser" />
 
   </div>
 </template>

@@ -6,7 +6,8 @@ export default {
     sender: String,
     content: String,
     timestamp: String,
-    attachment: Boolean
+    attachment: Boolean,
+    reactions: Array
   },
   methods: {
     downloadAttachments() {
@@ -20,6 +21,9 @@ export default {
     },
     forwardMessage(){
         this.$emit('forward-message', this.messageId);
+    },
+    addReaction() {
+      this.$emit('open-emoji-modal', this.messageId);
     }
   }
 }
@@ -58,10 +62,24 @@ export default {
                         </button>
                     </span>
                 </div>
+                <div class="p-2">
+                    <span class="">
+                        <button class="btn btn-sm btn-primary" @click="addReaction" title="Add reaction">
+                            <svg class="feather">
+                                <use href="/feather-sprite-v4.29.0.svg#smile"/>
+                            </svg>
+                        </button>
+                    </span>
+                </div>
             </div>
         <div class="p-2 small ">{{ timestamp}}</div>   
         </div>
-            <div class=" p-2 Large">{{ content }}</div>        
+            <div class=" p-2 Large">{{ content }}</div>
+            <div v-if="reactions && reactions.length > 0" class="p-2 small">
+                <div class="badge bg-light text-dark" v-for="reaction in reactions" :key="reaction">
+                    {{ reaction }}
+                </div>
+            </div>
         </div>
         
     </template>

@@ -1,11 +1,13 @@
 <script>
 import ContactForm from '../components/ContactForm.vue';
+import NewConversationModal from '../components/NewConversationModal.vue';
 import { getConversations } from '../services/conversations.js';
 
 export default {
   name: 'ConversationView',
   components: {
-    ContactForm
+    ContactForm,
+    NewConversationModal
   },
   data() {
     return {
@@ -30,7 +32,9 @@ export default {
             lastMessage: conv.LastMessage || '',
             time: this.formatTime(conv.LastMessageTime),
             timestamp: conv.LastMessageTime,
-            status: conv.Status || ''
+            status: conv.Status || '',
+            isPrivate: conv.ConversationType === 'private',
+            otherUsername: conv.OtherUsername
           }))
           .sort((a, b) => {
             if (!a.timestamp) return 1;
@@ -60,6 +64,17 @@ export default {
       } else {
         return date.toLocaleDateString('en-US');
       }
+    },
+    openNewConversationModal() {
+      this.$refs.newConvModal.open();
+    },
+    async handleConversationCreated(conversationId) {
+      await this.loadConversations();
+      this.$router.push({ name: 'conversation', params: { id: conversationId } });
+    },
+    async handleGroupCreated(conversationId) {
+      await this.loadConversations();
+      this.$router.push({ name: 'conversation', params: { id: conversationId } });
     }
   }
 }
@@ -67,17 +82,22 @@ export default {
 
 <template>
   <div style ="height: 40px;"> 
-    <!-- i KNOW it is bad idea to use inline styles for spaing but this is a quik fix -->
   </div>
   <div class="conversation-view">
     <div class="d-flex align-items-center mb-3">
       <h2>Conversations</h2>
-      <button class="btn btn-primary ms-auto" @click="loadConversations" :disabled="loading">
+      <button class="btn btn-primary ms-auto" @click="openNewConversationModal">
         Create New Conversation
       </button>
     </div>
     <div v-if="loading">Loading...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <ContactForm v-else :conversations="conversations" />
+
+    <NewConversationModal
+      ref="newConvModal"
+      @conversation-created="handleConversationCreated"
+      @group-created="handleGroupCreated"
+    />
   </div>
 </template>

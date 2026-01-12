@@ -148,6 +148,27 @@ func (db *appdbimpl) UpdateGroupPhoto(groupID uint, photoData []byte) error {
 
 	return nil
 }
+
+func (db *appdbimpl) GetGroupPhoto(groupID uint) ([]byte, error) {
+	var photoID *int64
+	err := db.c.QueryRow("SELECT photo_id FROM Groups WHERE id = ?", groupID).Scan(&photoID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get photo ID for group: %w", err)
+	}
+
+	if photoID == nil {
+		return nil, fmt.Errorf("group has no photo")
+	}
+
+	var photoData []byte
+	err = db.c.QueryRow("SELECT photo_data FROM Users_photos WHERE id = ?", *photoID).Scan(&photoData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get photo data: %w", err)
+	}
+
+	return photoData, nil
+}
+
 func (db *appdbimpl) GroupExists(groupID uint) (bool, error) {
 	var count int
 	err := db.c.QueryRow("SELECT COUNT(*) FROM Groups WHERE id = ?", groupID).Scan(&count)
@@ -155,4 +176,13 @@ func (db *appdbimpl) GroupExists(groupID uint) (bool, error) {
 		return false, fmt.Errorf("failed to check if group exists: %w", err)
 	}
 	return count > 0, nil
+}
+
+func (db *appdbimpl) GetGroupIDByConversationID(conversationID uint) (uint, error) {
+	var groupID uint
+	err := db.c.QueryRow("SELECT id FROM Groups WHERE conversation_id = ?", conversationID).Scan(&groupID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get group id for conversation: %w", err)
+	}
+	return groupID, nil
 }

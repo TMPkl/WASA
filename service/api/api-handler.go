@@ -34,10 +34,14 @@ func (rt *_router) Handler() http.Handler {
 
 	rt.router.PATCH("/groups/:groupId/name", rt.RenameGroup)
 	rt.router.POST("/groups/:groupId/photo", rt.UpdateGroupPhoto)
+	rt.router.GET("/groups/:groupId/photo", rt.GetGroupPhoto)
 
 	rt.router.GET("/conversations/:username", rt.GetMyConversations)
 	rt.router.POST("/conversation/:conversationId", rt.GetConversation)
 	rt.router.POST("/attachments/:messageId", rt.GetAttachmentFromMessage)
+
+	rt.router.GET("/users", rt.SearchUsers)
+	rt.router.POST("/conversations/list", rt.GetAllMyConversations)
 	//test
 	// rt.router.POST("/test", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// 	data, err := rt.readFileFromRequest(r)

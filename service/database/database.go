@@ -48,6 +48,7 @@ type AppDatabase interface {
 	UpdateUsername(oldUsername, newUsername string) error
 	AddProfilePhoto(username string, photoData []byte) error
 	GetProfilePhoto(username string) ([]byte, error)
+	GetAllUsers() ([]string, error)
 
 	DoesUsersOwnConversation(unA string, unB string) (uint, error)
 	CreatePrivateConversation(username1 string, username2 string) (uint, error)
@@ -72,6 +73,7 @@ type AppDatabase interface {
 	IsUserInGroup(groupID uint, username string) (bool, error)
 	SaveGroupMessage(username string, groupID uint, messageContent string, ap attachments.AttachmentsPack) (Message, error)
 	UpdateGroupPhoto(groupID uint, photoData []byte) error
+	GetGroupPhoto(groupID uint) ([]byte, error)
 	GroupExists(groupID uint) (bool, error)
 
 	GetConversationSnippet(conversationID uint) (*ConvSnippet, error)
@@ -82,6 +84,9 @@ type AppDatabase interface {
 
 	GetConversationType(conversationID uint) (string, error)
 	GetAttachmentFromMessage(messageID int) ([]byte, error)
+
+	GetGroupIDByConversationID(conversationID uint) (uint, error)
+	GetAllConversations(username string) ([]ConvInfo, error)
 }
 
 type appdbimpl struct {

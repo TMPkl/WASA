@@ -98,3 +98,23 @@ func (db *appdbimpl) GetProfilePhoto(username string) ([]byte, error) {
 	}
 	return photoData, nil
 }
+func (db *appdbimpl) GetAllUsers() ([]string, error) {
+	rows, err := db.c.Query("SELECT username FROM users")
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []string
+	for rows.Next() {
+		var username string
+		if err := rows.Scan(&username); err != nil {
+			return nil, fmt.Errorf("Failed to scan username: %w", err)
+		}
+		users = append(users, username)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("Row iteration error: %w", err)
+	}
+	return users, nil
+}

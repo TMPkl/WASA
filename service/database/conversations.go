@@ -33,33 +33,24 @@ func (db *appdbimpl) GetConversationSnippet(conversationID uint) (*ConvSnippet, 
 	}
 
 	if snippet.ConversationType == "private" {
-		// Get the other user's username and last message
 		err = db.c.QueryRow(`
 			SELECT 
-				CASE 
-					WHEN pcm1.member_username = pcm2.member_username THEN pcm1.member_username
-					ELSE CASE 
-						WHEN pcm1.member_username < pcm2.member_username THEN pcm2.member_username
-						ELSE pcm1.member_username
-					END
-				END as other_username,
+				(SELECT member_username FROM Private_conversations_memberships 
+				 WHERE conversation_id = ? LIMIT 1 OFFSET 0) as first_user,
 				COALESCE(m.content, '') as last_message,
 				COALESCE(m.timestamp, '') as last_timestamp,
 				COALESCE(m.status, '') as last_status
-			FROM Private_conversations_memberships pcm1
-			LEFT JOIN Private_conversations_memberships pcm2 
-				ON pcm1.conversation_id = pcm2.conversation_id 
-				AND pcm1.member_username != pcm2.member_username
+			FROM Conversations c
 			LEFT JOIN (
 				SELECT conversation_id, content, timestamp, status
 				FROM Messages
 				WHERE conversation_id = ?
 				ORDER BY timestamp DESC
 				LIMIT 1
-			) m ON pcm1.conversation_id = m.conversation_id
-			WHERE pcm1.conversation_id = ?
+			) m ON c.id = m.conversation_id
+			WHERE c.id = ?
 			LIMIT 1
-		`, conversationID, conversationID).Scan(&snippet.OtherUsername, &snippet.LastMessage, &snippet.LastMessageTime, &snippet.Status)
+		`, conversationID, conversationID, conversationID).Scan(&snippet.OtherUsername, &snippet.LastMessage, &snippet.LastMessageTime, &snippet.Status)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get private conversation details: %w", err)
 		}
@@ -199,4 +190,65 @@ func (db *appdbimpl) IsConversationGroup(conversationID uint) (bool, error) {
 		return false, fmt.Errorf("failed to get conversation type: %w", err)
 	}
 	return convType == "group", nil
+}
+
+type ConvInfo struct {
+	ConversationID uint   `json:"conversation_id"`
+	IsGroup        bool   `json:"is_group"`
+	Name           string `json:"name"` // Group name or other participant's username
+}
+
+func (db *appdbimpl) GetAllConversations(username string) ([]ConvInfo, error) {
+
+	rows, err := db.c.Query(`
+		SELECT c.id, c.type,
+			CASE 
+				WHEN c.type = 'private' THEN 
+					(SELECT 
+						CASE 
+							WHEN pcm1.member_username = pcm2.member_username THEN pcm1.member_username
+							ELSE CASE 
+								WHEN pcm1.member_username < pcm2.member_username THEN pcm2.member_username
+								ELSE pcm1.member_username
+							END
+						END
+					FROM Private_conversations_memberships pcm1
+					LEFT JOIN Private_conversations_memberships pcm2 
+						ON pcm1.conversation_id = pcm2.conversation_id 
+						AND pcm1.member_username != pcm2.member_username
+					WHERE pcm1.conversation_id = c.id
+					LIMIT 1)
+				WHEN c.type = 'group' THEN 
+					(SELECT g.name 
+					FROM Groups g 
+					WHERE g.conversation_id = c.id
+					LIMIT 1)
+			END as name
+		FROM Conversations c
+		LEFT JOIN Private_conversations_memberships pcm ON c.id = pcm.conversation_id
+		LEFT JOIN Groups g ON c.id = g.conversation_id
+		LEFT JOIN Groups_memberships gm ON g.id = gm.group_id
+		WHERE (c.type = 'private' AND pcm.member_username = ?)
+		   OR (c.type = 'group' AND gm.member_username = ?);
+		`, username, username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to conversation for user: %w", err)
+	}
+	defer rows.Close()
+
+	var conversations []ConvInfo
+	for rows.Next() {
+		var ci ConvInfo
+		var convType string
+		if err := rows.Scan(&ci.ConversationID, &convType, &ci.Name); err != nil {
+			return nil, fmt.Errorf("error wziu mmmm: %w", err)
+		}
+		ci.IsGroup = convType == "group"
+		conversations = append(conversations, ci)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over conversations: %w", err)
+	}
+
+	return conversations, nil
 }

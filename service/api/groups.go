@@ -340,3 +340,38 @@ func (rt *_router) UpdateGroupPhoto(w http.ResponseWriter, r *http.Request, ps h
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (rt *_router) GetGroupPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	groupIDParam := ps.ByName("groupId")
+
+	var groupID uint
+	_, err := fmt.Sscanf(groupIDParam, "%d", &groupID)
+	if err != nil {
+		http.Error(w, "invalid group ID", http.StatusBadRequest)
+		return
+	}
+
+	groupExists, err := rt.db.GroupExists(groupID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error checking group existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !groupExists {
+		http.Error(w, "group does not exist", http.StatusNotFound)
+		return
+	}
+
+	photoData, err := rt.db.GetGroupPhoto(groupID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get group photo: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if photoData == nil {
+		http.Error(w, "no photo found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	_, _ = w.Write(photoData)
+}

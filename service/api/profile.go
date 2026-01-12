@@ -288,3 +288,16 @@ func (rt *_router) GetUserProfilePhoto(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(photoData)
 }
+func (rt *_router) SearchUsers(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	//zwraca listy wszystkich uzytkownikow
+	users, err := rt.db.GetAllUsers()
+	if err != nil {
+		rt.baseLogger.Printf(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(users)
+}

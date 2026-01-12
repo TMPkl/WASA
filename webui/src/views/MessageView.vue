@@ -1,11 +1,15 @@
 <script>
 import MessageItem from '../components/MessageItem.vue';
+import ConversationListModal from '../components/ConversationListModal.vue';
+import EmojiInputModal from '../components/EmojiInputModal.vue';
 import axios from 'axios';
 
 export default {
     name: 'MessageView',
     components: {
-        MessageItem
+        MessageItem,
+        ConversationListModal,
+        EmojiInputModal
     },
     props: {
         messages: {
@@ -13,34 +17,49 @@ export default {
             default: () => []
         }
     },
+    data() {
+        return {
+            pendingForwardMessageId: null,
+            forwardError: null
+        };
+    },
     methods: {
-        async forwardMessage(messageId) {
-            const conversationId = prompt('Enter the conversation ID to forward this message to:');
-            
-            if (!conversationId) {
-                return;
-            }
-            
+        forwardMessage(messageId) {
+            this.pendingForwardMessageId = messageId;
+            this.$nextTick(() => {
+                if (this.$refs.convListModal && this.$refs.convListModal.open) {
+                    this.$refs.convListModal.open();
+                }
+            });
+        },
+        openEmojiModal(messageId) {
+            this.$refs.emojiModal.open(messageId);
+        },
+        async handleConversationSelect(conversationId, conv) {
+            if (!this.pendingForwardMessageId) return;
+
             const token = localStorage.getItem('token');
             const username = localStorage.getItem('username');
-            
+
             try {
                 await axios({
                     method: 'post',
-                    url: `${__API_URL__}/messages/${messageId}/forwards`,
+                    url: `${__API_URL__}/messages/${this.pendingForwardMessageId}/forwards`,
                     headers: {
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
                     data: {
                         username: username,
-                        addressingConversationID: parseInt(conversationId)
+                        addressingConversationID: conversationId
                     }
                 });
-                alert('Message forwarded successfully!');
+                this.forwardError = null;
             } catch (e) {
                 console.error('Failed to forward message:', e);
-                alert('Failed to forward message: ' + (e?.response?.data?.error || e.message));
+                this.forwardError = e?.response?.data?.error || e.message;
+            } finally {
+                this.pendingForwardMessageId = null;
             }
         },
         async handleDeleteMessage(messageId) {
@@ -63,6 +82,47 @@ export default {
             } catch (e) {
                 console.error('Failed to delete message:', e);
                 alert('Failed to delete message: ' + (e?.response?.data?.error || e.message));
+            }
+        },
+        async removeReaction(messageId) {
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+            try {
+                await axios({
+                    method: 'delete',
+                    url: `${__API_URL__}/messages/${messageId}/reactions`,
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    data: {
+                        username: username
+                    }
+                });
+                this.$emit('reaction-removed', messageId);
+            } catch (e) {
+                console.error('Failed to remove reaction:', e);
+            }
+        },
+        async addReaction(messageId, emoji) {
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+            try {
+                await axios({
+                    method: 'post',
+                    url: `${__API_URL__}/messages/${messageId}/reactions`,
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    data: {
+                        username: username,
+                        emoji: emoji
+                    }
+                });
+                this.$emit('reaction-added', messageId);
+            } catch (e) {
+                console.error('Failed to add reaction:', e);
             }
         },
         async handleDownloadAttachment(messageId) {
@@ -143,9 +203,22 @@ export default {
             :content="message.content"
             :timestamp="message.timestamp"
             :attachment="message.attachment"
+            :reactions="message.reactions"
             @download-attachment="handleDownloadAttachment"
             @delete-message="handleDeleteMessage"
             @forward-message="forwardMessage"
+            @open-emoji-modal="openEmojiModal"
+        />
+
+        <ConversationListModal
+            ref="convListModal"
+            title="Forward message to"
+            @select="handleConversationSelect"
+        />
+
+        <EmojiInputModal
+            ref="emojiModal"
+            @add-reaction="addReaction"
         />
     </div>
 </template>

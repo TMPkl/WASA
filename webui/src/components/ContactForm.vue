@@ -28,6 +28,8 @@ export default {
       :lastMessage="conversation.lastMessage"
       :time="conversation.time"
       :status="conversation.status"
+      :is-private="conversation.isPrivate"
+      :other-username="conversation.otherUsername"
       @click.native="goToConversation(conversation.id)"
       style="cursor:pointer;"
     />
