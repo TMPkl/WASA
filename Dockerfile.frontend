@@ -1,0 +1,8 @@
+FROM node:lts AS frontend_d
+WORKDIR /src/webui
+COPY webui .
+RUN yarn run build-prod
+
+FROM nginx:latest
+COPY --from=frontend_d /src/webui/dist /usr/share/nginx/html
+EXPOSE 2137
