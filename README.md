@@ -26,7 +26,7 @@ For a convenient graphical representation of all resources, please open:
 The backend is implemented in Go and is located in the `service` directory, with the main entry point in `cmd/` directory.
 
 The backend uses a SQLite database to store user data, and the database is created using migrations in `service/database/migrations/`.
-![DB photo](doc/Untitled.png)
+![DB photo](doc/DB.png)
 
 ----
 

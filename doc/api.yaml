@@ -110,7 +110,7 @@ paths:
             minLength: 1
             maxLength: 64
             pattern: "^[a-zA-Z0-9_-]+$"
-            example: "john_doe"
+            example: "Karol"
       responses:
         "200":
           description: List of conversations
@@ -263,41 +263,7 @@ paths:
         "500":
           description: Server error
 
-  /messages/{messageId}/attachments:
-    get:
-      tags: [messages]
-      summary: Get message attachments
-      description: Retrieves all attachments for a specific message.
-      operationId: getMessageAttachments
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/MessageId'
-        - name: username
-          in: query
-          required: true
-          schema:
-            type: string
-            minLength: 1
-            maxLength: 64
-          description: Username for authorization
-      responses:
-        "200":
-          description: Attachments retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  attachments:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Attachment'
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden - user not in conversation
-        "404":
-          description: Message not found
+
 
   /attachments/{messageId}:
     post:
@@ -358,7 +324,7 @@ paths:
             minLength: 1
             maxLength: 64
             pattern: "^[a-zA-Z0-9_-]+$"
-            example: "john_doe"
+            example: "Karol"
       responses:
         "200":
           description: User profile photo retrieved successfully
@@ -803,18 +769,18 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "jane_doe"
+          example: "Karol"
         LastMessage:
           type: string
           description: Content of the last message in the conversation
           minLength: 1
           maxLength: 500
-          example: "Hello, how are you?"
+          example: "Hello, whats up?"
         LastMessageTime:
           type: string
           format: date-time
           description: Timestamp of the last message
-          example: "2026-01-12T10:30:00Z"
+          example: "2026-01-01T21:37:00Z"
 
     GetConversationRequest:
       type: object
@@ -827,7 +793,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
         message_quantity:
           type: integer
           description: Number of messages to retrieve (default 50, max 100)
@@ -863,7 +829,7 @@ components:
             minLength: 1
             maxLength: 64
             pattern: "^[a-zA-Z0-9_-]+$"
-            example: "john_doe"
+            example: "Karol"
         messages:
           type: array
           description: List of messages in the conversation
@@ -887,18 +853,18 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
         content:
           type: string
           description: Message content
           minLength: 1
           maxLength: 500
-          example: "Hello, how are you?"
+          example: "Hello, whats up?"
         timestamp:
           type: string
           format: date-time
           description: Message timestamp
-          example: "2026-01-12T10:30:00Z"
+          example: "2026-01-01T21:37:00Z"
         has_attachment:
           type: boolean
           description: Whether the message has attachments
@@ -910,7 +876,7 @@ components:
           maxItems: 50
           items:
             type: string
-            example: "john_doe: 👍"
+            example: "Karol: (:"
         status:
           type: string
           description: Message status
@@ -927,32 +893,32 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "msg-54321"
+          example: "54321"
         senderId:
           type: string
           description: Sender identifier
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
         conversationId:
           type: string
           description: Conversation ID
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "conv-12345"
+          example: "12345"
         content:
           type: string
           description: Message text
           minLength: 1
           maxLength: 500
-          example: "Hello, how are you?"
+          example: "Hello, whats up?"
         timestamp:
           type: string
           description: ISO timestamp
           format: date-time
-          example: "2026-01-12T10:30:00Z"
+          example: "2026-01-01T21:37:00Z"
         attachments:
           type: array
           description: Optional message attachments
@@ -972,13 +938,13 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "conv-12345"
+          example: "12345"
         content:
           type: string
           description: Message text
           minLength: 1
           maxLength: 500
-          example: "Hello, how are you?"
+          example: "Hello, whats up?"
         attachments:
           type: array
           description: Optional message attachments
@@ -1003,7 +969,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
 
     Reaction:
       type: object
@@ -1015,14 +981,14 @@ components:
           description: Emoji character
           minLength: 1
           maxLength: 4
-          example: "👍"
+          example: "<:"
         username:
           type: string
           description: Username of the user reacting
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
 
     GroupMember:
       type: object
@@ -1035,7 +1001,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
 
     AddGroupMemberRequest:
       type: object
@@ -1048,14 +1014,14 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
         user_to_add:
           type: string
           description: Username of the user to add to the group
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "jane_doe"
+          example: "Karol"
 
     GroupName:
       type: object
@@ -1068,22 +1034,22 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
         newGroupName:
           type: string
           description: Group name
           minLength: 3
           maxLength: 50
-          example: "Development Team"
+          pattern: "^.*$"
 
     PhotoUpload:
       type: object
-      description: Photo upload payload (max 10 MB, resized to 200x200px, converted to JPEG)
+      description: Photo upload payload
       required: [photo, username]
       properties:
         photo:
           type: string
-          description: Binary image file (JPG or PNG, max 10 MB)
+          description: Binary image file
           format: binary
         username:
           type: string
@@ -1091,7 +1057,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
 
 
     Attachment:
@@ -1121,20 +1087,20 @@ components:
         id:
           type: string
           description: Message ID
-          example: "msg-54321"
+          example: "54321"
         senderId:
           type: string
           description: Username of the sender
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
         content:
           type: string
           description: Message content (or emoji for reactions)
           minLength: 1
           maxLength: 500
-          example: "Hello, how are you?"
+          example: "Hello, whats up?"
         conversationId:
           type: string
           description: Conversation ID
@@ -1143,8 +1109,7 @@ components:
           type: string
           format: date-time
           description: Message timestamp
-          example: "2026-01-12T10:30:00Z"
-
+          example: "2026-01-01T21:37:00Z"
     DeleteReaction:
       type: object
       description: Delete reaction payload
@@ -1156,7 +1121,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
 
     GroupCreate:
       type: object
@@ -1175,7 +1140,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
 
     GroupCreateResponse:
       type: object
@@ -1199,4 +1164,4 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "john_doe"
+          example: "Karol"
