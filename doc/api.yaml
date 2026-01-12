@@ -107,6 +107,10 @@ paths:
           required: true
           schema:
             type: string
+            minLength: 1
+            maxLength: 64
+            pattern: "^[a-zA-Z0-9_-]+$"
+            example: "john_doe"
       responses:
         "200":
           description: List of conversations
@@ -124,7 +128,7 @@ paths:
           description: Server error
 
   /conversation/{conversationId}:
-    get:
+    post:
       tags: [conversations]
       summary: Get conversation
       description: Retrieves a single conversation with participants and message history.
@@ -136,6 +140,10 @@ paths:
           required: true
           schema:
             type: string
+            minLength: 1
+            maxLength: 64
+            pattern: "^[a-zA-Z0-9_-]+$"
+            example: "12345"
       requestBody:
         required: true
         content:
@@ -162,7 +170,7 @@ paths:
     post:
       tags: [messages]
       summary: Send message
-      description: Sends a new message. If conversation doesn't exist between users, creates a new private conversation.
+      description: Sends a new message to either a group conversation or private conversation. If conversation doesn't exist between users and no conversationId is provided, creates a new private conversation.
       operationId: sendMessage
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -173,7 +181,6 @@ paths:
               type: object
               required:
                 - senderUsername
-                - receiverUsername
                 - content
               properties:
                 senderUsername:
@@ -181,7 +188,10 @@ paths:
                   description: Username of the sender
                 receiverUsername:
                   type: string
-                  description: Username of the receiver
+                  description: Username of the receiver (required for private conversations, optional for groups)
+                conversationId:
+                  type: string
+                  description: Conversation ID (optional, used for group messages or existing conversations)
                 content:
                   type: string
                   description: Message content
@@ -199,7 +209,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
         "400":
-          description: Invalid request (missing required fields)
+          description: Invalid request (missing required fields or conversation not found)
         "401":
           description: Unauthorized - invalid or missing token
         "500":
@@ -250,6 +260,153 @@ paths:
           description: Forbidden - user not in target conversation
         "404":
           description: Original message not found
+        "500":
+          description: Server error
+
+  /messages/{messageId}/attachments:
+    get:
+      tags: [messages]
+      summary: Get message attachments
+      description: Retrieves all attachments for a specific message.
+      operationId: getMessageAttachments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+        - name: username
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+          description: Username for authorization
+      responses:
+        "200":
+          description: Attachments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attachments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Attachment'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - user not in conversation
+        "404":
+          description: Message not found
+
+  /attachments/{messageId}:
+    post:
+      tags: [messages]
+      summary: Get attachment from message
+      description: Retrieves a specific attachment from a message.
+      operationId: getAttachmentFromMessage
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+      responses:
+        "200":
+          description: Attachment retrieved successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: Message or attachment not found
+        "500":
+          description: Server error
+
+  /users:
+    get:
+      tags: [profile]
+      summary: Search users
+      description: Retrieves a list of all users in the system.
+      operationId: searchUsers
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: List of all users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+        "401":
+          description: Unauthorized
+        "500":
+          description: Server error
+
+  /users/{username}/photo:
+    get:
+      tags: [profile]
+      summary: Get user profile photo
+      description: Retrieves the profile photo of a specific user.
+      operationId: getUserProfilePhoto
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+            pattern: "^[a-zA-Z0-9_-]+$"
+            example: "john_doe"
+      responses:
+        "200":
+          description: User profile photo retrieved successfully
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized
+        "404":
+          description: User or photo not found
+        "500":
+          description: Server error
+
+  /conversations/list:
+    post:
+      tags: [conversations]
+      summary: Get all conversations
+      description: Retrieves all conversations for the authenticated user with extended details.
+      operationId: getAllMyConversations
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username]
+              properties:
+                username:
+                  type: string
+                  description: Username for authorization
+                  minLength: 1
+                  maxLength: 64
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                  example: "john_doe"
+      responses:
+        "200":
+          description: List of all user conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        "401":
+          description: Unauthorized
         "500":
           description: Server error
 
@@ -340,9 +497,9 @@ paths:
         "400":
           description: Invalid request body
         "401":
-          description: Unauthorized , invalid or missing token
+          description: Unauthorized - invalid or missing token
         "403":
-          description: Forbidden - user nt in conversation
+          description: Forbidden - user not in conversation
         "500":
           description: Server error
 
@@ -367,7 +524,7 @@ paths:
         "400":
           description: Invalid request (group doesn't exist, user to add doesn't exist, or invalid group ID)
         "401":
-          description: Unauthorized - invvalid token or requesting user not in group
+          description: Unauthorized - invalid token or requesting user not in group
         "208":
           description: User already in group
         "500":
@@ -449,6 +606,29 @@ paths:
           description: Invalid request (missing username, invalid photo, invalid group ID, or group doesn't exist)
         "401":
           description: Unauthorized - invalid or missing token
+        "500":
+          description: Server error
+    
+    get:
+      tags: [groups]
+      summary: Get group photo
+      description: Retrieves the group photo.
+      operationId: getGroupPhoto
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        "200":
+          description: Group photo retrieved successfully
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized - invalid or missing token
+        "404":
+          description: Group or photo not found
         "500":
           description: Server error
 
@@ -534,6 +714,7 @@ components:
           minLength: 3
           maxLength: 16
           pattern: "^[a-zA-Z0-9_]+$"
+          example: "Karol"
 
     LoginResponse:
       type: object
@@ -546,6 +727,7 @@ components:
           minLength: 10
           maxLength: 512
           pattern: "^[A-Za-z0-9._-]+$"
+          example: "LOSOWEad7afwdbkafa7ZNAKIIIIII.absfisuefs.shfsef"
 
     UsernameUpdate:
       type: object
@@ -558,12 +740,14 @@ components:
           minLength: 3
           maxLength: 16
           pattern: "^[a-zA-Z0-9_]+$"
+          example: "o1l1"
         new-username:
           type: string
           description: New username (must be 5-16 characters)
           minLength: 5
           maxLength: 16
           pattern: "^[a-zA-Z0-9_]+$"
+          example: "Karol"
 
     Conversation:
       type: object
@@ -601,23 +785,36 @@ components:
         ConversationID:
           type: integer
           description: Unique ID of the conversation
+          example: 12345
         ConversationType:
           type: string
           description: Type of conversation (private or group)
           enum: [private, group]
+          example: "private"
         GroupName:
           type: string
           description: Name of the group (only for group conversations)
+          minLength: 1
+          maxLength: 100
+          example: "Project Team"
         OtherUsername:
           type: string
           description: Username of the other participant (only for private conversations)
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "jane_doe"
         LastMessage:
           type: string
           description: Content of the last message in the conversation
+          minLength: 1
+          maxLength: 500
+          example: "Hello, how are you?"
         LastMessageTime:
           type: string
           format: date-time
           description: Timestamp of the last message
+          example: "2026-01-12T10:30:00Z"
 
     GetConversationRequest:
       type: object
@@ -629,12 +826,15 @@ components:
           description: Username for authorization
           minLength: 1
           maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "john_doe"
         message_quantity:
           type: integer
           description: Number of messages to retrieve (default 50, max 100)
           minimum: 1
           maximum: 100
           default: 50
+          example: 50
 
     ConversationResponse:
       type: object
@@ -644,14 +844,31 @@ components:
         conversation_id:
           type: integer
           description: Unique ID of the conversation
+          example: 12345
+        is_group:
+          type: boolean
+          description: Whether the conversation is a group conversation
+          example: false
+        group_id:
+          type: integer
+          description: Group ID (only for group conversations)
+          example: 100
         participants:
           type: array
           description: List of participant usernames
+          minItems: 1
+          maxItems: 100
           items:
             type: string
+            minLength: 1
+            maxLength: 64
+            pattern: "^[a-zA-Z0-9_-]+$"
+            example: "john_doe"
         messages:
           type: array
           description: List of messages in the conversation
+          minItems: 0
+          maxItems: 10000
           items:
             $ref: '#/components/schemas/MessageInConversation'
 
@@ -663,27 +880,41 @@ components:
           type: integer
           format: int64
           description: Message ID
+          example: 54321
         sender_username:
           type: string
           description: Username of the sender
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "john_doe"
         content:
           type: string
           description: Message content
+          minLength: 1
+          maxLength: 500
+          example: "Hello, how are you?"
         timestamp:
           type: string
           format: date-time
           description: Message timestamp
+          example: "2026-01-12T10:30:00Z"
         has_attachment:
           type: boolean
           description: Whether the message has attachments
+          example: false
         reactions:
           type: array
-          description: List of reactions 
+          description: List of reactions
+          minItems: 0
+          maxItems: 50
           items:
             type: string
+            example: "john_doe: 👍"
         status:
           type: string
           description: Message status
+          example: "sent"
 
     Message:
       type: object
@@ -696,28 +927,32 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "msg-54321"
         senderId:
           type: string
           description: Sender identifier
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "john_doe"
         conversationId:
           type: string
           description: Conversation ID
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "conv-12345"
         content:
           type: string
           description: Message text
           minLength: 1
           maxLength: 500
-          pattern: "^.*$"
+          example: "Hello, how are you?"
         timestamp:
           type: string
           description: ISO timestamp
           format: date-time
+          example: "2026-01-12T10:30:00Z"
         attachments:
           type: array
           description: Optional message attachments
@@ -737,12 +972,13 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "conv-12345"
         content:
           type: string
           description: Message text
           minLength: 1
           maxLength: 500
-          pattern: "^.*$"
+          example: "Hello, how are you?"
         attachments:
           type: array
           description: Optional message attachments
@@ -759,12 +995,15 @@ components:
         addressingConversationID:
           type: integer
           description: Target conversation ID to forward the message to
+          minimum: 1
+          example: 12345
         username:
           type: string
           description: Username of the user forwarding the message
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "john_doe"
 
     Reaction:
       type: object
@@ -776,13 +1015,14 @@ components:
           description: Emoji character
           minLength: 1
           maxLength: 4
-          pattern: "^.*$"
+          example: "👍"
         username:
           type: string
           description: Username of the user reacting
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "john_doe"
 
     GroupMember:
       type: object
@@ -795,6 +1035,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "john_doe"
 
     AddGroupMemberRequest:
       type: object
@@ -807,12 +1048,14 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "john_doe"
         user_to_add:
           type: string
           description: Username of the user to add to the group
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "jane_doe"
 
     GroupName:
       type: object
@@ -825,32 +1068,30 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
+          example: "john_doe"
         newGroupName:
           type: string
           description: Group name
           minLength: 3
           maxLength: 50
-          pattern: "^.*$"
+          example: "Development Team"
 
     PhotoUpload:
       type: object
-      description: Photo upload payload
+      description: Photo upload payload (max 10 MB, resized to 200x200px, converted to JPEG)
       required: [photo, username]
       properties:
         photo:
           type: string
-          description: Binary image file
+          description: Binary image file (JPG or PNG, max 10 MB)
           format: binary
-          minLength: 1
-          maxLength: 10485760  # 10 MB
-          pattern: "^.*$"
         username:
           type: string
           description: Username of the user uploading the photo
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "Karol"
+          example: "john_doe"
 
 
     Attachment:
@@ -864,10 +1105,13 @@ components:
           minLength: 1
           maxLength: 100
           pattern: "^[a-zA-Z0-9/+-]+$"
+          example: "image/jpeg"
         content:
           type: string
           description: Base64 encoded binary content
           format: byte
+          minLength: 1
+          maxLength: 10485760
 
     MessageResponse:
       type: object
@@ -877,19 +1121,29 @@ components:
         id:
           type: string
           description: Message ID
+          example: "msg-54321"
         senderId:
           type: string
           description: Username of the sender
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "john_doe"
         content:
           type: string
           description: Message content (or emoji for reactions)
+          minLength: 1
+          maxLength: 500
+          example: "Hello, how are you?"
         conversationId:
           type: string
           description: Conversation ID
+          example: "12345"
         timestamp:
           type: string
           format: date-time
           description: Message timestamp
+          example: "2026-01-12T10:30:00Z"
 
     DeleteReaction:
       type: object
@@ -902,7 +1156,7 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "Karol"
+          example: "john_doe"
 
     GroupCreate:
       type: object
@@ -914,14 +1168,14 @@ components:
           description: Name of the group
           minLength: 1
           maxLength: 100
-          pattern: "^.*$"
+          example: "Development Team"
         username:
           type: string
           description: Creator's username (for authorization)
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "Karol"
+          example: "john_doe"
 
     GroupCreateResponse:
       type: object
@@ -945,4 +1199,4 @@ components:
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
-          example: "Karol"
+          example: "john_doe"

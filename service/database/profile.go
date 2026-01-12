@@ -69,7 +69,6 @@ func (db *appdbimpl) AddProfilePhoto(username string, photoData []byte) error {
 		return fmt.Errorf("Failed to query old photo_id: %w", err)
 	}
 
-	// Usuń stare zdjęcie
 	if oldPhotoID.Valid {
 		_, err = tx.Exec("DELETE FROM Users_photos WHERE photo_id=?", oldPhotoID.Int64)
 		if err != nil {
