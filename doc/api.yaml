@@ -277,6 +277,11 @@ paths:
       responses:
         "200":
           description: Attachment retrieved successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
         "401":
           description: Unauthorized
         "404":
@@ -298,11 +303,18 @@ paths:
             application/json:
               schema:
                 type: array
+                minItems: 0
+                maxItems: 1000
                 items:
                   type: object
+                  description: User information
                   properties:
                     username:
                       type: string
+                      minLength: 1
+                      maxLength: 64
+                      pattern: "^[a-zA-Z0-9_-]+$"
+                      description: Username of the user
         "401":
           description: Unauthorized
         "500":
@@ -369,8 +381,11 @@ paths:
             application/json:
               schema:
                 type: array
+                minItems: 0
+                maxItems: 1000
                 items:
                   type: object
+                  description: Conversation information
         "401":
           description: Unauthorized
         "500":
@@ -392,6 +407,7 @@ paths:
             type: string
             minLength: 1
             maxLength: 64
+            pattern: "^[a-zA-Z0-9_-]+$"
           description: Username for authorization
       responses:
         "200":
@@ -400,9 +416,13 @@ paths:
             application/json:
               schema:
                 type: object
+                description: Attachments response
                 properties:
                   attachments:
                     type: array
+                    minItems: 0
+                    maxItems: 100
+                    description: List of attachments
                     items:
                       $ref: '#/components/schemas/Attachment'
         "401":
@@ -747,6 +767,7 @@ components:
     ConversationSnippet:
       type: object
       description: A snippet of a conversation for list view
+      required: [ConversationID, ConversationType]
       properties:
         ConversationID:
           type: integer
@@ -755,6 +776,9 @@ components:
         ConversationType:
           type: string
           description: Type of conversation (private or group)
+          minLength: 1
+          maxLength: 10
+          pattern: "^(private|group)$"
           enum: [private, group]
           example: "private"
         GroupName:
@@ -762,6 +786,7 @@ components:
           description: Name of the group (only for group conversations)
           minLength: 1
           maxLength: 100
+          pattern: "^.*$"
           example: "Project Team"
         OtherUsername:
           type: string
@@ -775,6 +800,7 @@ components:
           description: Content of the last message in the conversation
           minLength: 1
           maxLength: 500
+          pattern: "^.*$"
           example: "Hello, whats up?"
         LastMessageTime:
           type: string
@@ -841,6 +867,7 @@ components:
     MessageInConversation:
       type: object
       description: Message within a conversation response
+      required: [id, sender_username, content, timestamp]
       properties:
         id:
           type: integer
@@ -876,10 +903,16 @@ components:
           maxItems: 50
           items:
             type: string
+            minLength: 1
+            maxLength: 100
+            description: Reaction string
             example: "Karol: (:"
         status:
           type: string
           description: Message status
+          minLength: 1
+          maxLength: 20
+          pattern: "^[a-z]+$"
           example: "sent"
 
     Message:
@@ -927,32 +960,6 @@ components:
           items:
             $ref: '#/components/schemas/Attachment'
 
-    MessageCreate:
-      type: object
-      description: New message payload
-      required: [conversationId, content]
-      properties:
-        conversationId:
-          type: string
-          description: Conversation identifier
-          minLength: 1
-          maxLength: 64
-          pattern: "^[a-zA-Z0-9_-]+$"
-          example: "12345"
-        content:
-          type: string
-          description: Message text
-          minLength: 1
-          maxLength: 500
-          example: "Hello, whats up?"
-        attachments:
-          type: array
-          description: Optional message attachments
-          minItems: 0
-          maxItems: 10
-          items:
-            $ref: '#/components/schemas/Attachment'
-
     ForwardRequest:
       type: object
       description: Forward message request
@@ -981,23 +988,11 @@ components:
           description: Emoji character
           minLength: 1
           maxLength: 4
+          pattern: "^[^ ]+$"
           example: "<:"
         username:
           type: string
           description: Username of the user reacting
-          minLength: 1
-          maxLength: 64
-          pattern: "^[a-zA-Z0-9_-]+$"
-          example: "Karol"
-
-    GroupMember:
-      type: object
-      description: Group member payload (deprecated - use AddGroupMemberRequest)
-      required: [username]
-      properties:
-        username:
-          type: string
-          description: Username of the member to add
           minLength: 1
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
@@ -1041,6 +1036,7 @@ components:
           minLength: 3
           maxLength: 50
           pattern: "^.*$"
+          example: "Development Team"
 
     PhotoUpload:
       type: object
@@ -1076,8 +1072,10 @@ components:
           type: string
           description: Base64 encoded binary content
           format: byte
+          pattern: "^[A-Za-z0-9+/]*={0,2}$"
           minLength: 1
           maxLength: 10485760
+          example: "iVBORw0KGgo..."
 
     MessageResponse:
       type: object
@@ -1087,6 +1085,9 @@ components:
         id:
           type: string
           description: Message ID
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
           example: "54321"
         senderId:
           type: string
@@ -1104,6 +1105,9 @@ components:
         conversationId:
           type: string
           description: Conversation ID
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
           example: "12345"
         timestamp:
           type: string
@@ -1133,6 +1137,7 @@ components:
           description: Name of the group
           minLength: 1
           maxLength: 100
+          pattern: "^.*$"
           example: "Development Team"
         username:
           type: string
