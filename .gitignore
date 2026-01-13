@@ -25,3 +25,4 @@ notka_z_komendami_ktore_wiem_ze_zapomne.txt
 node_modules/
 package-lock.json
 package.json
+.venv/
