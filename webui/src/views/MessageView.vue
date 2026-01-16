@@ -104,7 +104,17 @@ export default {
                 console.error('Failed to remove reaction:', e);
             }
         },
+        isSingleEmoji(str) {
+            const trimmed = str.trim();
+            const emojiRegex = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic})[\p{Emoji_Modifier}]*$/u;
+            return emojiRegex.test(trimmed);
+        },
         async addReaction(messageId, emoji) {
+            if (!this.isSingleEmoji(emoji)) {
+                console.error('Invalid reaction: must be a single emoji');
+                alert('Reaction must be a single emoji');
+                return;
+            }
             const token = localStorage.getItem('token');
             const username = localStorage.getItem('username');
             try {
@@ -204,9 +214,13 @@ export default {
             :timestamp="message.timestamp"
             :attachment="message.attachment"
             :reactions="message.reactions"
+            :replying-to-id="message.replyingToId"
+            :replying-to-sender="message.replyingToSender"
+            :replying-to-content="message.replyingToContent"
             @download-attachment="handleDownloadAttachment"
             @delete-message="handleDeleteMessage"
             @forward-message="forwardMessage"
+            @reply-message="$emit('reply-message', $event)"
             @open-emoji-modal="openEmojiModal"
         />
 

@@ -7,7 +7,10 @@ export default {
     content: String,
     timestamp: String,
     attachment: Boolean,
-    reactions: Array
+    reactions: Array,
+    replyingToId: [String, Number],
+    replyingToSender: String,
+    replyingToContent: String
   },
   methods: {
     downloadAttachments() {
@@ -21,6 +24,9 @@ export default {
     },
     forwardMessage(){
         this.$emit('forward-message', this.messageId);
+    },
+    replyMessage(){
+        this.$emit('reply-message', this.messageId);
     },
     addReaction() {
       this.$emit('open-emoji-modal', this.messageId);
@@ -55,6 +61,15 @@ export default {
                 </button></span></div>
                 <div  class="p-2">
                     <span class="">
+                        <button class="btn btn-sm btn-info" @click="replyMessage" title="Reply to message">
+                            <svg class="feather">
+                                <use href="/feather-sprite-v4.29.0.svg#corner-down-left"/>
+                            </svg>
+                        </button>
+                    </span>
+                </div>
+                <div  class="p-2">
+                    <span class="">
                         <button class="btn btn-sm btn-secondary" @click="forwardMessage" >
                             <svg class="feather">
                                 <use href="/feather-sprite-v4.29.0.svg#repeat"/>
@@ -74,6 +89,10 @@ export default {
             </div>
         <div class="p-2 small ">{{ timestamp}}</div>   
         </div>
+            <div v-if="replyingToSender" class="p-2 border-start border-info bg-light" style="margin: 0.5rem; padding: 0.5rem;">
+              <small class="text-muted d-block">Replying to <strong>{{ replyingToSender }}</strong>:</small>
+              <small class="text-muted text-truncate d-block" style="max-width: 500px;">{{ replyingToContent }}</small>
+            </div>
             <div class=" p-2 Large">{{ content }}</div>
             <div v-if="reactions && reactions.length > 0" class="p-2 small">
                 <div class="badge bg-light text-dark" v-for="reaction in reactions" :key="reaction">

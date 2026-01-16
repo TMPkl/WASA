@@ -26,6 +26,7 @@ export default {
       otherUserPhoto: null,
       users: [],
       selectedUser: null,
+      replyingTo: null,
     };
   },
   async mounted() {
@@ -59,7 +60,10 @@ export default {
         content: msg.content,
         timestamp: msg.timestamp,
         attachment: msg.has_attachment,
-        reactions: msg.reactions || []
+        reactions: msg.reactions || [],
+        replyingToId: msg.replying_to_id || null,
+        replyingToSender: msg.replying_to_sender || null,
+        replyingToContent: msg.replying_to_content || null
       }));
       if (this.isGroup) {
         this.conversationName = res.data.participants?.join(', ') || `Group ${this.id}`;
@@ -85,7 +89,7 @@ export default {
     this.stopAutoRefresh();
   },
   methods: {
-    async handleSendMessage({ content, files }) {
+    async handleSendMessage({ content, files, replyingToId }) {
       this.sending = true;
       try {
         const token = localStorage.getItem('token');
@@ -95,6 +99,10 @@ export default {
         formData.append('senderUsername', username);
         formData.append('content', content);
         formData.append('conversationId', this.id);
+        
+        if (replyingToId) {
+          formData.append('replyingToId', replyingToId);
+        }
         
         const currentUser = localStorage.getItem('username');
         const otherUser = this.isGroup 
@@ -119,6 +127,7 @@ export default {
         });
 
         this.$refs.messageForm.clearForm();
+        this.replyingTo = null;
         
         await this.loadMessages();
         this.scrollToBottom();
@@ -166,12 +175,33 @@ export default {
         content: msg.content,
         timestamp: msg.timestamp,
         attachment: msg.has_attachment,
-        reactions: msg.reactions || []
+        reactions: msg.reactions || [],
+        replyingToId: msg.replying_to_id || null,
+        replyingToSender: msg.replying_to_sender || null,
+        replyingToContent: msg.replying_to_content || null
       }));
       this.scrollToBottom();
     },
     handleMessageDeleted(messageId) {
       this.messages = this.messages.filter(msg => msg.id !== messageId);
+    },
+    handleReplyMessage(messageId) {
+      const message = this.messages.find(msg => msg.id === messageId);
+      if (message) {
+        this.replyingTo = {
+          id: messageId,
+          sender: message.sender,
+          content: message.content
+        };
+        this.$nextTick(() => {
+          if (this.$refs.messageForm && this.$refs.messageForm.$el) {
+            this.$refs.messageForm.$el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      }
+    },
+    handleCancelReply() {
+      this.replyingTo = null;
     }
     ,
     openAddUserModal() {
@@ -307,16 +337,18 @@ export default {
     <div class="messages flex-grow-1 mb-2" ref="messagesContainer">
       <div v-if="loading">Loading...</div>
       <div v-else-if="error" class="text-danger">{{ error }}</div>
-      <MessageView v-else :messages="messages" @message-deleted="handleMessageDeleted" />
+      <MessageView v-else :messages="messages" @message-deleted="handleMessageDeleted" @reply-message="handleReplyMessage" />
     </div>
 
     <MessageInputForm
       ref="messageForm"
       :is-group="isGroup"
       :sending="sending"
+      :replying-to="replyingTo"
       @send-message="handleSendMessage"
       @add-user="openAddUserModal"
       @leave-group="handleLeaveGroup"
+      @cancel-reply="handleCancelReply"
     />
 
     <UserList ref="userList" :items="users" @select="handleSelectUser" />

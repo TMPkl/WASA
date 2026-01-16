@@ -9,9 +9,13 @@ export default {
     sending: {
       type: Boolean,
       default: false
+    },
+    replyingTo: {
+      type: Object,
+      default: null
     }
   },
-  emits: ['send-message', 'add-user', 'leave-group'],
+  emits: ['send-message', 'add-user', 'leave-group', 'cancel-reply'],
   data() {
     return {
       messageContent: '',
@@ -41,7 +45,8 @@ export default {
 
       this.$emit('send-message', {
         content: this.messageContent,
-        files: this.selectedFile ? [this.selectedFile] : []
+        files: this.selectedFile ? [this.selectedFile] : [],
+        replyingToId: this.replyingTo?.id
       });
     },
     clearForm() {
@@ -50,12 +55,29 @@ export default {
       if (this.$refs.fileInput) {
         this.$refs.fileInput.value = '';
       }
+    },
+    cancelReply() {
+      this.$emit('cancel-reply');
     }
   }
 };
 </script>
 <template>
   <div class="message-input-form">
+    <!-- Reply context preview -->
+    <div v-if="replyingTo" class="alert alert-info d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <strong>Replying to {{ replyingTo.sender }}:</strong>
+        <div class="small text-muted">{{ replyingTo.content }}</div>
+      </div>
+      <button 
+        type="button" 
+        class="btn-close" 
+        @click="cancelReply"
+        title="Cancel reply"
+      ></button>
+    </div>
+
     <!-- Selected file preview -->
     <div v-if="selectedFile" class="mb-2">
       <div class="badge bg-info d-flex align-items-center">

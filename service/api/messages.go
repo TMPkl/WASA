@@ -10,15 +10,17 @@ import (
 	"net/http"
 	"time"
 
+	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database"
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database/attachments"
 	"github.com/julienschmidt/httprouter"
 )
 
 type SendMessageRequest struct {
-	Content         string //`json:"content"`
-	ConversationID  int    //`json:"conversationId"`/// trzeba tez ustalic jak wygladaje te id
-	SenderUsername  string //`json:"senderUsername"`
-	ReciverUsername string //`json:"receiverUsername"`
+	Content         string
+	ConversationID  int
+	SenderUsername  string
+	ReciverUsername string
+	ReplyingToID    int64
 	Attachmemnts    attachments.AttachmentsPack
 }
 
@@ -59,6 +61,16 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		_, err := fmt.Sscanf(conversationIdStr, "%d", &rqst.ConversationID)
 		if err != nil {
 			rt.baseLogger.Printf("Invalid conversationId: %s", err.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	replyingToIdStr := r.FormValue("replyingToId")
+	if replyingToIdStr != "" {
+		_, err := fmt.Sscanf(replyingToIdStr, "%d", &rqst.ReplyingToID)
+		if err != nil {
+			rt.baseLogger.Printf("Invalid replyingToId: %s", err.Error())
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -117,7 +129,13 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 			attachmentsPack.Attachments = append(attachmentsPack.Attachments, attachment)
 		}
 
-		message, err := rt.db.SaveMessage(rqst.SenderUsername, rqst.Content, attachmentsPack, uint(rqst.ConversationID))
+		var message database.Message
+		var err error
+		if rqst.ReplyingToID > 0 {
+			message, err = rt.db.SaveMessageWithReply(rqst.SenderUsername, rqst.Content, attachmentsPack, uint(rqst.ConversationID), int64(rqst.ReplyingToID))
+		} else {
+			message, err = rt.db.SaveMessage(rqst.SenderUsername, rqst.Content, attachmentsPack, uint(rqst.ConversationID))
+		}
 		if err != nil {
 			rt.baseLogger.Printf("Failed to save message: %s", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
@@ -175,7 +193,12 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		attachmentsPack.Attachments = append(attachmentsPack.Attachments, attachment)
 	}
 
-	message, err := rt.db.SaveMessage(rqst.SenderUsername, rqst.Content, attachmentsPack, convID)
+	var message database.Message
+	if rqst.ReplyingToID > 0 {
+		message, err = rt.db.SaveMessageWithReply(rqst.SenderUsername, rqst.Content, attachmentsPack, convID, int64(rqst.ReplyingToID))
+	} else {
+		message, err = rt.db.SaveMessage(rqst.SenderUsername, rqst.Content, attachmentsPack, convID)
+	}
 	if err != nil {
 		rt.baseLogger.Printf("Failed to save message: %s", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)

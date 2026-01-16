@@ -29,10 +29,15 @@ type Message struct {
 	Timestamp             time.Time
 	Attachment            []byte // GOB encoded AttachmentsPack
 	Reacted_to_message_id int64
+	Replying_to_id        int64
 	Status                string
 }
 
 func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap attachments.AttachmentsPack, ConvID uint) (Message, error) {
+	return db.SaveMessageWithReply(username, MessageContent, ap, ConvID, 0)
+}
+
+func (db *appdbimpl) SaveMessageWithReply(username string, MessageContent string, ap attachments.AttachmentsPack, ConvID uint, replyingToID int64) (Message, error) {
 	exist, err := db.UserExists(username)
 	if err != nil {
 		return Message{}, fmt.Errorf("Database error: %w", err)
@@ -46,6 +51,7 @@ func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap atta
 		Timestamp:      time.Now(),
 		Status:         "sent",
 		ConversationID: ConvID,
+		Replying_to_id: replyingToID,
 	}
 	var attachmentsData []byte
 	if ap.IsEmpty() {
@@ -59,8 +65,8 @@ func (db *appdbimpl) SaveMessage(username string, MessageContent string, ap atta
 	}
 	message.Attachment = attachmentsData
 
-	res, err := db.c.Exec("INSERT INTO Messages (conversation_id, sender_username, content, timestamp, attachment, status) VALUES (?, ?, ?, ?, ?, ?)",
-		message.ConversationID, message.SenderUsername, message.Content, message.Timestamp, message.Attachment, message.Status)
+	res, err := db.c.Exec("INSERT INTO Messages (conversation_id, sender_username, content, timestamp, attachment, replying_to_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		message.ConversationID, message.SenderUsername, message.Content, message.Timestamp, message.Attachment, message.Replying_to_id, message.Status)
 	if err != nil {
 		return Message{}, fmt.Errorf("Failed to save message: %w", err)
 	}
@@ -157,8 +163,8 @@ func (db *appdbimpl) MessageOwner(messageID string) (string, error) {
 }
 func (db *appdbimpl) GetMessageByID(messageID string) (*Message, error) {
 	var message Message
-	err := db.c.QueryRow("SELECT id, conversation_id, sender_username, content, timestamp, COALESCE(attachment, ''), COALESCE(reacted_to_message_id, 0), status FROM Messages WHERE id = ?", messageID).
-		Scan(&message.ID, &message.ConversationID, &message.SenderUsername, &message.Content, &message.Timestamp, &message.Attachment, &message.Reacted_to_message_id, &message.Status)
+	err := db.c.QueryRow("SELECT id, conversation_id, sender_username, content, timestamp, COALESCE(attachment, ''), COALESCE(reacted_to_message_id, 0), COALESCE(replying_to_id, 0), status FROM Messages WHERE id = ?", messageID).
+		Scan(&message.ID, &message.ConversationID, &message.SenderUsername, &message.Content, &message.Timestamp, &message.Attachment, &message.Reacted_to_message_id, &message.Replying_to_id, &message.Status)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to bla bla bla fiu fiu fiu: %w", err)
 	}
@@ -282,7 +288,7 @@ func (db *appdbimpl) GetConversationHistory(conversationID uint, limit int) ([]M
 
 	query := `
 		SELECT id, conversation_id, sender_username, content, timestamp, 
-		       COALESCE(attachment, ''), COALESCE(reacted_to_message_id, 0), status
+		       COALESCE(attachment, ''), COALESCE(reacted_to_message_id, 0), COALESCE(replying_to_id, 0), status
 		FROM Messages
 		WHERE conversation_id = ? AND reacted_to_message_id IS NULL
 		ORDER BY timestamp DESC
@@ -306,6 +312,7 @@ func (db *appdbimpl) GetConversationHistory(conversationID uint, limit int) ([]M
 			&msg.Timestamp,
 			&msg.Attachment,
 			&msg.Reacted_to_message_id,
+			&msg.Replying_to_id,
 			&msg.Status,
 		)
 		if err != nil {

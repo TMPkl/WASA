@@ -121,13 +121,16 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	type MessageResponse struct {
-		ID             int64    `json:"id"`
-		SenderUsername string   `json:"sender_username"`
-		Content        string   `json:"content"`
-		Timestamp      string   `json:"timestamp"`
-		HasAttachment  bool     `json:"has_attachment"`
-		Reactions      []string `json:"reactions"`
-		Status         string   `json:"status"`
+		ID                int64    `json:"id"`
+		SenderUsername    string   `json:"sender_username"`
+		Content           string   `json:"content"`
+		Timestamp         string   `json:"timestamp"`
+		HasAttachment     bool     `json:"has_attachment"`
+		Reactions         []string `json:"reactions"`
+		Status            string   `json:"status"`
+		ReplyingToID      *int64   `json:"replying_to_id,omitempty"`
+		ReplyingToSender  *string  `json:"replying_to_sender,omitempty"`
+		ReplyingToContent *string  `json:"replying_to_content,omitempty"`
 	}
 
 	type ConversationResponse struct {
@@ -149,7 +152,7 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 			}
 		}
 
-		messageResponses = append(messageResponses, MessageResponse{
+		msgResp := MessageResponse{
 			ID:             msg.ID,
 			SenderUsername: msg.SenderUsername,
 			Content:        msg.Content,
@@ -157,7 +160,17 @@ func (rt *_router) GetConversation(w http.ResponseWriter, r *http.Request, ps ht
 			HasAttachment:  len(msg.Attachment) > 0,
 			Reactions:      reactions,
 			Status:         msg.Status,
-		})
+		}
+		if msg.Replying_to_id > 0 {
+			replyingToMsg, err := rt.db.GetMessageByID(fmt.Sprintf("%d", msg.Replying_to_id))
+			if err == nil && replyingToMsg != nil {
+				msgResp.ReplyingToID = &replyingToMsg.ID
+				msgResp.ReplyingToSender = &replyingToMsg.SenderUsername
+				msgResp.ReplyingToContent = &replyingToMsg.Content
+			}
+		}
+
+		messageResponses = append(messageResponses, msgResp)
 	}
 
 	response := ConversationResponse{

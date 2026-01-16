@@ -30,7 +30,7 @@ export default {
       :status="conversation.status"
       :is-private="conversation.isPrivate"
       :other-username="conversation.otherUsername"
-      @click.native="goToConversation(conversation.id)"
+      @click="goToConversation(conversation.id)"
       style="cursor:pointer;"
     />
   </div>

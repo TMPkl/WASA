@@ -13,11 +13,22 @@ export default {
       this.emoji = '';
       this.$refs.modal.showModal();
     },
+    isSingleEmoji(str) {
+      const trimmed = str.trim();
+      const emojiRegex = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic})[\p{Emoji_Modifier}]*$/u;
+      return emojiRegex.test(trimmed);
+    },
     addReaction() {
-      if (this.emoji && this.emoji.trim()) {
-        this.$emit('add-reaction', this.messageId, this.emoji.trim());
-        this.$refs.modal.close();
+      if (!this.emoji || !this.emoji.trim()) {
+        alert('Please enter an emoji');
+        return;
       }
+      if (!this.isSingleEmoji(this.emoji)) {
+        alert('Please enter a single emoji only');
+        return;
+      }
+      this.$emit('add-reaction', this.messageId, this.emoji.trim());
+      this.$refs.modal.close();
     },
     cancel() {
       this.$refs.modal.close();

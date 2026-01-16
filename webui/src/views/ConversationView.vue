@@ -25,7 +25,8 @@ export default {
       this.error = null;
       try {
         const data = await getConversations();
-        this.conversations = data
+        const conversations = Array.isArray(data) ? data : [];
+        this.conversations = conversations
           .map(conv => ({
             id: conv.ConversationID,
             title: conv.ConversationType === 'private' ? conv.OtherUsername : conv.GroupName,
@@ -53,9 +54,11 @@ export default {
       const date = new Date(timestamp);
       const now = new Date();
       const diff = now - date;
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const days = Math.floor(Math.abs(diff) / (1000 * 60 * 60 * 24));
       
-      if (days === 0) {
+      if (diff < 0) {
+        return 'in the future';
+      } else if (days === 0) {
         return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
       } else if (days === 1) {
         return 'yesterday';
