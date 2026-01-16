@@ -1013,7 +1013,7 @@ components:
           pattern: "^[A-Za-z0-9+/]*={0,2}$"
           minLength: 1
           maxLength: 10485760
-          example: "iVBORw0KGgo..."
+          example: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 
     MessageResponse:
       type: object
