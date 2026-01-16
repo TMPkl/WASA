@@ -83,7 +83,6 @@ export default {
     }
 
     this.scrollToBottom();
-    this.startAutoRefresh();
   },
   unmounted() {
     this.stopAutoRefresh();
@@ -130,7 +129,6 @@ export default {
         this.replyingTo = null;
         
         await this.loadMessages();
-        this.scrollToBottom();
       } catch (e) {
         this.error = e?.response?.data?.error || e.message || 'Failed to send message';
       } finally {

@@ -16,11 +16,11 @@ import (
 )
 
 type SendMessageRequest struct {
-	Content         string
-	ConversationID  int
-	SenderUsername  string
-	ReciverUsername string
-	ReplyingToID    int64
+	Content         string //`json:"content"`
+	ConversationID  int    //`json:"conversationId"`/// trzeba tez ustalic jak wygladaje te id
+	SenderUsername  string //`json:"senderUsername"`
+	ReciverUsername string //`json:"receiverUsername"`
+	ReplyingToID    int64  //`json:"replyingToId"` - ID of the message this is replying to
 	Attachmemnts    attachments.AttachmentsPack
 }
 
