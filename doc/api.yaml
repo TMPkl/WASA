@@ -170,7 +170,7 @@ paths:
     post:
       tags: [messages]
       summary: Send message
-      description: Sends a new message to either a group conversation or private conversation. If conversation doesn't exist between users and no conversationId is provided, creates a new private conversation.
+      description: Sends a new message to either a group conversation or private conversation. If conversation doesn't exist between users and no conversationId is provided, creates a new private conversation. Optionally supports replying to existing messages.
       operationId: sendMessage
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -186,15 +186,37 @@ paths:
                 senderUsername:
                   type: string
                   description: Username of the sender
+                  minLength: 1
+                  maxLength: 64
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                  example: "Karol"
                 receiverUsername:
                   type: string
                   description: Username of the receiver (required for private conversations, optional for groups)
+                  minLength: 1
+                  maxLength: 64
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                  example: "alice"
                 conversationId:
                   type: string
                   description: Conversation ID (optional, used for group messages or existing conversations)
+                  minLength: 1
+                  maxLength: 64
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                  example: "12345"
                 content:
                   type: string
                   description: Message content
+                  minLength: 1
+                  maxLength: 500
+                  example: "Hello, whats up?"
+                replyingToId:
+                  type: string
+                  description: ID of the message being replied to (optional, for threading)
+                  minLength: 1
+                  maxLength: 64
+                  pattern: "^[0-9]+$"
+                  example: "98765"
                 attachments:
                   type: array
                   items:
@@ -229,6 +251,35 @@ paths:
           description: Message deleted successfully
         "401":
           description: Unauthorized - invalid token or not the message sender
+        "404":
+          description: Message not found
+        "500":
+          description: Server error
+
+  /messages/{messageId}/status:
+    patch:
+      tags: [messages]
+      summary: Update message status
+      description: Updates the status of a message (e.g., from 'sent' to 'delivered' or 'received'). User must be a member of the conversation but not the sender of the message.
+      operationId: updateMessageStatus
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageStatusUpdate'
+      responses:
+        "204":
+          description: Message status updated successfully
+        "400":
+          description: Invalid request body or invalid status value
+        "401":
+          description: Unauthorized - invalid or missing token
+        "403":
+          description: Forbidden - user not in conversation or is the message sender
         "404":
           description: Message not found
         "500":
@@ -352,86 +403,6 @@ paths:
         "500":
           description: Server error
 
-  /conversations/list:
-    post:
-      tags: [conversations]
-      summary: Get all conversations
-      description: Retrieves all conversations for the authenticated user with extended details.
-      operationId: getAllMyConversations
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [username]
-              properties:
-                username:
-                  type: string
-                  description: Username for authorization
-                  minLength: 1
-                  maxLength: 64
-                  pattern: "^[a-zA-Z0-9_-]+$"
-                  example: "john_doe"
-      responses:
-        "200":
-          description: List of all user conversations
-          content:
-            application/json:
-              schema:
-                type: array
-                minItems: 0
-                maxItems: 1000
-                items:
-                  type: object
-                  description: Conversation information
-        "401":
-          description: Unauthorized
-        "500":
-          description: Server error
-
-  /messages/{messageId}/attachments:
-    get:
-      tags: [messages]
-      summary: Get message attachments
-      description: Retrieves all attachments for a specific message.
-      operationId: getMessageAttachments
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/MessageId'
-        - name: username
-          in: query
-          required: true
-          schema:
-            type: string
-            minLength: 1
-            maxLength: 64
-            pattern: "^[a-zA-Z0-9_-]+$"
-          description: Username for authorization
-      responses:
-        "200":
-          description: Attachments retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                description: Attachments response
-                properties:
-                  attachments:
-                    type: array
-                    minItems: 0
-                    maxItems: 100
-                    description: List of attachments
-                    items:
-                      $ref: '#/components/schemas/Attachment'
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden - user not in conversation
-        "404":
-          description: Message not found
-
   /messages/{messageId}/reactions:
     post:
       tags: [messages]
@@ -545,56 +516,7 @@ paths:
           description: Server error
           
 
-  /groups/{groupId}/name:
-    patch:
-      tags: [groups]
-      summary: Rename group
-      description: Updates the group name. Only group members can rename the group.
-      operationId: setGroupName
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/GroupId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GroupName'
-      responses:
-        "204":
-          description: Group renamed successfully
-        "400":
-          description: Invalid request (missing fields, invalid group ID, or group doesn't exist)
-        "401":
-          description: Unauthorized - invalid token or user not in group
-        "500":
-          description: Server error
-
   /groups/{groupId}/photo:
-    post:
-      tags: [groups]
-      summary: Update group photo
-      description: Uploads or replaces group photo. Only group members can update the photo.
-      operationId: setGroupPhoto
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/GroupId'
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PhotoUpload'
-      responses:
-        "204":
-          description: Group photo updated successfully
-        "400":
-          description: Invalid request (missing username, invalid photo, invalid group ID, or group doesn't exist)
-        "401":
-          description: Unauthorized - invalid or missing token
-        "500":
-          description: Server error
-    
     get:
       tags: [groups]
       summary: Get group photo
@@ -781,6 +703,10 @@ components:
           pattern: "^(private|group)$"
           enum: [private, group]
           example: "private"
+        GroupID:
+          type: integer
+          description: ID of the group (only for group conversations)
+          example: 100
         GroupName:
           type: string
           description: Name of the group (only for group conversations)
@@ -807,6 +733,13 @@ components:
           format: date-time
           description: Timestamp of the last message
           example: "2026-01-01T21:37:00Z"
+        LastMessageSender:
+          type: string
+          description: Username of the sender of the last message
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "alice"
 
     GetConversationRequest:
       type: object
@@ -909,11 +842,29 @@ components:
             example: "Karol: (:"
         status:
           type: string
-          description: Message status
-          minLength: 1
-          maxLength: 20
-          pattern: "^[a-z]+$"
+          description: Message status (sent, delivered, received, hidden)
+          minLength: 4
+          maxLength: 9
+          pattern: "^(sent|delivered|received|hidden)$"
           example: "sent"
+        replying_to_id:
+          type: integer
+          format: int64
+          description: ID of the message being replied to (0 if not a reply)
+          example: 0
+        replying_to_sender:
+          type: string
+          description: Username of the sender of the message being replied to
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "alice"
+        replying_to_content:
+          type: string
+          description: Content preview of the message being replied to
+          minLength: 1
+          maxLength: 500
+          example: "Original message text"
 
     Message:
       type: object
@@ -962,14 +913,21 @@ components:
 
     ForwardRequest:
       type: object
-      description: Forward message request
-      required: [addressingConversationID, username]
+      description: Forward message request. Must provide either addressingConversationID (for existing conversation) or newContactUsername (to create new private conversation).
+      required: [username]
       properties:
         addressingConversationID:
           type: integer
-          description: Target conversation ID to forward the message to
+          description: Target conversation ID to forward the message to (optional, use when forwarding to existing conversation)
           minimum: 1
           example: 12345
+        newContactUsername:
+          type: string
+          description: Username to forward message to as a new contact (optional, use when forwarding to new conversation)
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "alice"
         username:
           type: string
           description: Username of the user forwarding the message
@@ -1017,26 +975,6 @@ components:
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
           example: "Karol"
-
-    GroupName:
-      type: object
-      description: Group name payload
-      required: [newGroupName, username]
-      properties:
-        username:
-          type: string
-          description: Username of the user renaming the group
-          minLength: 1
-          maxLength: 64
-          pattern: "^[a-zA-Z0-9_-]+$"
-          example: "Karol"
-        newGroupName:
-          type: string
-          description: Group name
-          minLength: 3
-          maxLength: 50
-          pattern: "^.*$"
-          example: "Development Team"
 
     PhotoUpload:
       type: object
@@ -1170,3 +1108,24 @@ components:
           maxLength: 64
           pattern: "^[a-zA-Z0-9_-]+$"
           example: "Karol"
+
+    MessageStatusUpdate:
+      type: object
+      description: Message status update payload
+      required: [username, status]
+      properties:
+        username:
+          type: string
+          description: Username of the user updating the status
+          minLength: 1
+          maxLength: 64
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: "Karol"
+        status:
+          type: string
+          description: New message status (must be one of 'sent', 'delivered', 'received', 'hidden')
+          minLength: 4
+          maxLength: 9
+          pattern: "^(sent|delivered|received|hidden)$"
+          enum: [sent, delivered, received, hidden]
+          example: "received"
