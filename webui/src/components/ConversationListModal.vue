@@ -17,6 +17,9 @@
             </div>
             <div class="modal-body">
               <div class="d-flex flex-column gap-2">
+                <button class="btn btn-success btn-sm mb-3" @click="openNewContactList">+ Add new contact</button>
+
+                <label class="form-label small text-muted">Select existing conversation:</label>
                 <input 
                   type="text" 
                   class="form-control mb-3" 
@@ -139,6 +142,9 @@ export default {
       // Emit conversation id (integer) for forwarding
       this.$emit('select', conv.id, conv);
       this.close();
+    },
+    openNewContactList() {
+      this.$emit('open-new-contact-list');
     }
   }
 };

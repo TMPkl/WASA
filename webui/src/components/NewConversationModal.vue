@@ -34,14 +34,39 @@ export default {
       this.loading = true;
       try {
         const token = localStorage.getItem('token');
-        const res = await axios({
+        const currentUsername = localStorage.getItem('username');
+
+        // Get all users
+        const usersRes = await axios({
           method: 'get',
           url: `${__API_URL__}/users`,
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-        this.users = res.data || [];
+        let allUsers = usersRes.data || [];
+
+        // Get current user's conversations
+        const convRes = await axios({
+          method: 'get',
+          url: `${__API_URL__}/conversations/${currentUsername}`,
+          headers: {
+            Authorization: token ? `Bearer ${token}` : undefined
+          }
+        });
+        const conversations = Array.isArray(convRes.data) ? convRes.data : [];
+
+        // Extract usernames from existing private conversations
+        const existingContacts = new Set(
+          conversations
+            .filter(conv => conv.ConversationType === 'private')
+            .map(conv => conv.OtherUsername)
+        );
+
+        // Filter: exclude current user and users with existing conversations
+        this.users = allUsers.filter(user => 
+          user !== currentUsername && !existingContacts.has(user)
+        );
       } catch (e) {
         this.error = 'Failed to load users';
         console.error(e);

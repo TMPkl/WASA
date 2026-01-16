@@ -53,7 +53,9 @@ export default {
       this.errormsg = null
       try {
         await updateUsername(this.newUsername)
+        localStorage.setItem('username', this.newUsername)
         this.success = 'Username updated'
+        this.newUsername = ''
         await this.load()
       } catch (e) {
         this.errormsg = (e.response && e.response.data) || e.message || String(e)

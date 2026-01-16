@@ -80,12 +80,33 @@ export default {
       this.loading = true;
       try {
         const token = localStorage.getItem('token');
-        const res = await axios({
+        const currentUsername = localStorage.getItem('username');
+
+        const usersRes = await axios({
           method: 'get',
           url: `${__API_URL__}/users`,
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
-        this.itemsInternal = Array.isArray(res.data) ? res.data : (res.data.users || []);
+        let allUsers = Array.isArray(usersRes.data) ? usersRes.data : (usersRes.data.users || []);
+
+        const convRes = await axios({
+          method: 'get',
+          url: `${__API_URL__}/conversations/${currentUsername}`,
+          headers: {
+            Authorization: token ? `Bearer ${token}` : undefined
+          }
+        });
+        const conversations = Array.isArray(convRes.data) ? convRes.data : [];
+
+        const existingContacts = new Set(
+          conversations
+            .filter(conv => conv.ConversationType === 'private')
+            .map(conv => conv.OtherUsername)
+        );
+
+         this.itemsInternal = allUsers.filter(user => 
+          user !== currentUsername && !existingContacts.has(user)
+        );
       } catch (e) {
         this.itemsInternal = [];
         this.error = e?.response?.data?.error || e.message || 'Failed to load users';

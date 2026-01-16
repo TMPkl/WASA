@@ -278,13 +278,10 @@ func (rt *_router) DeleteMessage(w http.ResponseWriter, r *http.Request, ps http
 type ForwardMessageRequest struct {
 	AddressingConversationID uint   `json:"addressingConversationID"`
 	Username                 string `json:"username"`
+	NewContactUsername       string `json:"newContactUsername"`
 }
 
 func (rt *_router) ForwardMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	//sprawdz autentykacje
-	//sprawdz czy uzytkownik jest w konwersacji
-	//zapisz wiadomosc
-	//przekaz wiadmosc z zmienionymi wartosciami
 	var rqst ForwardMessageRequest
 	err := json.NewDecoder(r.Body).Decode(&rqst)
 	if err != nil {
@@ -294,7 +291,6 @@ func (rt *_router) ForwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	authorised, err := rt.Authorise(w, r, rqst.Username)
-
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -304,17 +300,6 @@ func (rt *_router) ForwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 
-	inConv, err := rt.db.UserInConversation(rqst.Username, rqst.AddressingConversationID)
-	if err != nil {
-		rt.baseLogger.Printf("Failed to wzium wzium: %s", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if !inConv {
-		rt.baseLogger.Printf("User %s is not in conversation %s", rqst.Username, rqst.AddressingConversationID)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
 	mesgID := ps.ByName("messageId")
 	forwardedMessage, err := rt.db.GetMessageByID(mesgID)
 	if err != nil {
@@ -327,9 +312,41 @@ func (rt *_router) ForwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 
+	var conversationID uint
+
+	// Handle forwarding to new contact or existing conversation
+	if rqst.NewContactUsername != "" {
+		// Create or get existing private conversation
+		convID, err := rt.db.CreatePrivateConversation(rqst.Username, rqst.NewContactUsername)
+		if err != nil {
+			rt.baseLogger.Printf("Failed to create private conversation: %s", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		conversationID = convID
+	} else if rqst.AddressingConversationID > 0 {
+		// Verify user is in the conversation
+		inConv, err := rt.db.UserInConversation(rqst.Username, rqst.AddressingConversationID)
+		if err != nil {
+			rt.baseLogger.Printf("Failed to check conversation membership: %s", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !inConv {
+			rt.baseLogger.Printf("User %s is not in conversation %d", rqst.Username, rqst.AddressingConversationID)
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		conversationID = rqst.AddressingConversationID
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("Either addressingConversationID or newContactUsername must be provided"))
+		return
+	}
+
 	var NewMessage SendMessageRequest
 	NewMessage.Content = forwardedMessage.Content
-	NewMessage.ConversationID = int(rqst.AddressingConversationID)
+	NewMessage.ConversationID = int(conversationID)
 	NewMessage.SenderUsername = rqst.Username
 
 	if len(forwardedMessage.Attachment) > 0 {

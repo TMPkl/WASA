@@ -32,8 +32,38 @@ func (db *appdbimpl) UpdateUsername(oldUsername, newUsername string) error {
 	if exist {
 		return errors.New("New username already exists")
 	}
-	_, err = db.c.Exec("UPDATE users SET username=? WHERE username=?", newUsername, oldUsername)
-	return err
+
+	tx, err := db.c.Begin()
+	if err != nil {
+		return fmt.Errorf("Failed to start transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Update users table
+	_, err = tx.Exec("UPDATE users SET username=? WHERE username=?", newUsername, oldUsername)
+	if err != nil {
+		return fmt.Errorf("Failed to update users table: %w", err)
+	}
+
+	// Update Messages table
+	_, err = tx.Exec("UPDATE Messages SET sender_username=? WHERE sender_username=?", newUsername, oldUsername)
+	if err != nil {
+		return fmt.Errorf("Failed to update messages: %w", err)
+	}
+
+	// Update Private_conversations_memberships table
+	_, err = tx.Exec("UPDATE Private_conversations_memberships SET member_username=? WHERE member_username=?", newUsername, oldUsername)
+	if err != nil {
+		return fmt.Errorf("Failed to update private conversation memberships: %w", err)
+	}
+
+	// Update Groups_memberships table
+	_, err = tx.Exec("UPDATE Groups_memberships SET member_username=? WHERE member_username=?", newUsername, oldUsername)
+	if err != nil {
+		return fmt.Errorf("Failed to update group memberships: %w", err)
+	}
+
+	return tx.Commit()
 }
 
 func (db *appdbimpl) AddProfilePhoto(username string, photoData []byte) error {

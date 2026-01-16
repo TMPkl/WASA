@@ -1,6 +1,7 @@
 <script>
 import MessageItem from '../components/MessageItem.vue';
 import ConversationListModal from '../components/ConversationListModal.vue';
+import UserList from '../components/UserList.vue';
 import EmojiInputModal from '../components/EmojiInputModal.vue';
 import axios from 'axios';
 
@@ -9,6 +10,7 @@ export default {
     components: {
         MessageItem,
         ConversationListModal,
+        UserList,
         EmojiInputModal
     },
     props: {
@@ -34,6 +36,38 @@ export default {
         },
         openEmojiModal(messageId) {
             this.$refs.emojiModal.open(messageId);
+        },
+        openNewContactList() {
+            if (this.$refs.userListModal && this.$refs.userListModal.open) {
+                this.$refs.userListModal.open();
+            }
+        },
+        async handleNewContactSelect(username) {
+            if (!this.pendingForwardMessageId) return;
+
+            const token = localStorage.getItem('token');
+            const currentUsername = localStorage.getItem('username');
+
+            try {
+                await axios({
+                    method: 'post',
+                    url: `${__API_URL__}/messages/${this.pendingForwardMessageId}/forwards`,
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    data: {
+                        username: currentUsername,
+                        newContactUsername: username
+                    }
+                });
+                this.forwardError = null;
+            } catch (e) {
+                console.error('Failed to forward message:', e);
+                this.forwardError = e?.response?.data?.error || e.message;
+            } finally {
+                this.pendingForwardMessageId = null;
+            }
         },
         async handleConversationSelect(conversationId, conv) {
             if (!this.pendingForwardMessageId) return;
@@ -228,6 +262,12 @@ export default {
             ref="convListModal"
             title="Forward message to"
             @select="handleConversationSelect"
+            @open-new-contact-list="openNewContactList"
+        />
+
+        <UserList
+            ref="userListModal"
+            @select="handleNewContactSelect"
         />
 
         <EmojiInputModal
