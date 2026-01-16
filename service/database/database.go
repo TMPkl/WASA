@@ -58,6 +58,7 @@ type AppDatabase interface {
 	GetMessageByID(messageID string) (*Message, error)
 	DeleteMessage(messageID string) error
 	MessageOwner(messageID string) (string, error)
+	UpdateMessageStatus(messageID string, newStatus string) error
 	UserInConversation(username string, conversationID uint) (bool, error)
 	ConversationIDfromMessageID(messageID string) (uint, error)
 
@@ -77,7 +78,7 @@ type AppDatabase interface {
 	GetGroupPhoto(groupID uint) ([]byte, error)
 	GroupExists(groupID uint) (bool, error)
 
-	GetConversationSnippet(conversationID uint) (*ConvSnippet, error)
+	GetConversationSnippet(conversationID uint, currentUsername string) (*ConvSnippet, error)
 	GetAllConIDsForUser(username string) ([]uint, error)
 	GetConversationHistory(conversationID uint, limit int) ([]Message, error)
 	GetConversationParticipants(conversationID uint) ([]string, error)

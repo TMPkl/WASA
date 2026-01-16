@@ -170,6 +170,36 @@ func (db *appdbimpl) GetMessageByID(messageID string) (*Message, error) {
 	}
 	return &message, nil
 }
+
+func (db *appdbimpl) UpdateMessageStatus(messageID string, newStatus string) error {
+	validStatuses := map[string]bool{
+		"sent":      true,
+		"delivered": true,
+		"received":  true,
+		"hidden":    true,
+	}
+
+	if !validStatuses[newStatus] {
+		return fmt.Errorf("invalid status: %s", newStatus)
+	}
+
+	result, err := db.c.Exec("UPDATE Messages SET status = ? WHERE id = ?", newStatus, messageID)
+	if err != nil {
+		return fmt.Errorf("failed to update message status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("message not found")
+	}
+
+	return nil
+}
+
 func (db *appdbimpl) UserInConversation(username string, conversationID uint) (bool, error) {
 	// Check if user is in private conversation
 	var exists int

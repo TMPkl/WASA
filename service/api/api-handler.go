@@ -17,6 +17,7 @@ func (rt *_router) Handler() http.Handler {
 	//Messages endpoints
 	rt.router.POST("/messages", rt.SendMessage)
 	rt.router.DELETE("/messages/:messageId", rt.DeleteMessage)
+	rt.router.PATCH("/messages/:messageId/status", rt.UpdateMessageStatus)
 	// Forward message
 	rt.router.POST("/messages/:messageId/forwards", rt.ForwardMessage)
 

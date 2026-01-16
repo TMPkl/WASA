@@ -275,6 +275,68 @@ func (rt *_router) DeleteMessage(w http.ResponseWriter, r *http.Request, ps http
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (rt *_router) UpdateMessageStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	type UpdateStatusRequest struct {
+		Username string `json:"username"`
+		Status   string `json:"status"`
+	}
+
+	messageId := ps.ByName("messageId")
+
+	var req UpdateStatusRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		rt.baseLogger.Printf("Error decoding request: %s", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Verify authentication
+	authorised, err := rt.Authorise(w, r, req.Username)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !authorised {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Get message to verify it exists and get conversation
+	msg, err := rt.db.GetMessageByID(messageId)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to get message: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if msg == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Verify user is in the conversation (recipient)
+	inConv, err := rt.db.UserInConversation(req.Username, msg.ConversationID)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to verify user in conversation: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !inConv {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	// Update status
+	err = rt.db.UpdateMessageStatus(messageId, req.Status)
+	if err != nil {
+		rt.baseLogger.Printf("Failed to update message status: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 type ForwardMessageRequest struct {
 	AddressingConversationID uint   `json:"addressingConversationID"`
 	Username                 string `json:"username"`

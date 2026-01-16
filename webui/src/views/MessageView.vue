@@ -248,6 +248,7 @@ export default {
             :timestamp="message.timestamp"
             :attachment="message.attachment"
             :reactions="message.reactions"
+            :status="message.status"
             :replying-to-id="message.replyingToId"
             :replying-to-sender="message.replyingToSender"
             :replying-to-content="message.replyingToContent"

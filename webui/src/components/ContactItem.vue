@@ -9,35 +9,45 @@ export default {
     time: String,
     status: String,
     isPrivate: Boolean,
-    otherUsername: String
+    otherUsername: String,
+    groupId: Number
   },
   data() {
     return {
-      userPhoto: null
+      photoUrl: null
     };
   },
   async mounted() {
-    if (this.isPrivate && this.otherUsername) {
-      await this.loadUserPhoto();
-    }
+    await this.loadPhoto();
   },
   unmounted() {
-    if (this.userPhoto) {
-      URL.revokeObjectURL(this.userPhoto);
+    if (this.photoUrl) {
+      URL.revokeObjectURL(this.photoUrl);
     }
   },
   watch: {
-    otherUsername(newVal) {
-      if (this.userPhoto) {
-        URL.revokeObjectURL(this.userPhoto);
-        this.userPhoto = null;
-      }
-      if (this.isPrivate && newVal) {
-        this.loadUserPhoto();
-      }
+    otherUsername() {
+      this.reloadPhoto();
+    },
+    groupId() {
+      this.reloadPhoto();
     }
   },
   methods: {
+    async reloadPhoto() {
+      if (this.photoUrl) {
+        URL.revokeObjectURL(this.photoUrl);
+        this.photoUrl = null;
+      }
+      await this.loadPhoto();
+    },
+    async loadPhoto() {
+      if (this.isPrivate && this.otherUsername) {
+        await this.loadUserPhoto();
+      } else if (!this.isPrivate && this.groupId) {
+        await this.loadGroupPhoto();
+      }
+    },
     async loadUserPhoto() {
       try {
         const token = localStorage.getItem('token');
@@ -49,10 +59,25 @@ export default {
           },
           responseType: 'blob'
         });
-        const url = URL.createObjectURL(res.data);
-        this.userPhoto = url;
+        this.photoUrl = URL.createObjectURL(res.data);
       } catch (e) {
         console.error('Failed to load user photo:', e);
+      }
+    },
+    async loadGroupPhoto() {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios({
+          method: 'get',
+          url: `${__API_URL__}/groups/${this.groupId}/photo?t=${Date.now()}`,
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          responseType: 'blob'
+        });
+        this.photoUrl = URL.createObjectURL(res.data);
+      } catch (e) {
+        console.error('Failed to load group photo:', e);
       }
     }
   }
@@ -62,9 +87,10 @@ export default {
 <template>
   <div class="d-flex p-3 text-muted border-bottom align-items-center justify-content-between">
     <div class="photo">
-      <img :src="userPhoto || '/account_icon_400x400.png'" alt="Avatar" class="rounded-circle" width="100" height="100" style="object-fit: cover;" />
+      <img :src="photoUrl || '/account_icon_400x400.png'" alt="Avatar" class="rounded-circle" width="100" height="100" style="object-fit: cover;" />
     </div>
     <div class="p-3 bg-light flex-grow-1 rounded-3">
+      <div class="text-muted small">{{ isPrivate ? 'Private chat with:' : 'Group:' }}</div>
       <div class="fw-bold">{{ title }}</div>
       <div class="text-dark">{{ lastMessage }}</div>
     </div>

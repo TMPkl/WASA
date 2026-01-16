@@ -5,13 +5,15 @@ import (
 )
 
 type ConvSnippet struct {
-	ConversationID   uint   `json:"ConversationID"`
-	ConversationType string `json:"ConversationType"` // "private" or "group"
-	GroupName        string `json:"GroupName,omitempty"`
-	OtherUsername    string `json:"OtherUsername,omitempty"`
-	LastMessage      string `json:"LastMessage"`
-	LastMessageTime  string `json:"LastMessageTime"`
-	Status           string `json:"Status,omitempty"`
+	ConversationID    uint   `json:"ConversationID"`
+	ConversationType  string `json:"ConversationType"` // "private" or "group"
+	GroupID           uint   `json:"GroupID,omitempty"`
+	GroupName         string `json:"GroupName,omitempty"`
+	OtherUsername     string `json:"OtherUsername,omitempty"`
+	LastMessage       string `json:"LastMessage"`
+	LastMessageTime   string `json:"LastMessageTime"`
+	LastMessageSender string `json:"LastMessageSender,omitempty"`
+	Status            string `json:"Status,omitempty"`
 }
 type MessageSnippet struct {
 	Sender     string
@@ -21,7 +23,7 @@ type MessageSnippet struct {
 	Status     string
 }
 
-func (db *appdbimpl) GetConversationSnippet(conversationID uint) (*ConvSnippet, error) {
+func (db *appdbimpl) GetConversationSnippet(conversationID uint, currentUsername string) (*ConvSnippet, error) {
 	var snippet ConvSnippet
 	err := db.c.QueryRow(`
 		SELECT id, type
@@ -35,22 +37,22 @@ func (db *appdbimpl) GetConversationSnippet(conversationID uint) (*ConvSnippet, 
 	if snippet.ConversationType == "private" {
 		err = db.c.QueryRow(`
 			SELECT 
-				(SELECT member_username FROM Private_conversations_memberships 
-				 WHERE conversation_id = ? LIMIT 1 OFFSET 0) as first_user,
+				pcm.member_username as other_user,
 				COALESCE(m.content, '') as last_message,
 				COALESCE(m.timestamp, '') as last_timestamp,
+				COALESCE(m.sender_username, '') as last_sender,
 				COALESCE(m.status, '') as last_status
-			FROM Conversations c
+			FROM Private_conversations_memberships pcm
 			LEFT JOIN (
-				SELECT conversation_id, content, timestamp, status
+				SELECT conversation_id, content, timestamp, sender_username, status
 				FROM Messages
 				WHERE conversation_id = ?
 				ORDER BY timestamp DESC
 				LIMIT 1
-			) m ON c.id = m.conversation_id
-			WHERE c.id = ?
+			) m ON pcm.conversation_id = m.conversation_id
+			WHERE pcm.conversation_id = ? AND pcm.member_username != ?
 			LIMIT 1
-		`, conversationID, conversationID, conversationID).Scan(&snippet.OtherUsername, &snippet.LastMessage, &snippet.LastMessageTime, &snippet.Status)
+		`, conversationID, conversationID, currentUsername).Scan(&snippet.OtherUsername, &snippet.LastMessage, &snippet.LastMessageTime, &snippet.LastMessageSender, &snippet.Status)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get private conversation details: %w", err)
 		}
@@ -58,20 +60,22 @@ func (db *appdbimpl) GetConversationSnippet(conversationID uint) (*ConvSnippet, 
 		// Get group name and last message
 		err = db.c.QueryRow(`
 			SELECT 
+				g.id,
 				g.name,
 				COALESCE(m.content, '') as last_message,
 				COALESCE(m.timestamp, '') as last_timestamp,
+				COALESCE(m.sender_username, '') as last_sender,
 				COALESCE(m.status, '') as last_status
 			FROM Groups g
 			LEFT JOIN (
-				SELECT conversation_id, content, timestamp, status
+				SELECT conversation_id, content, timestamp, sender_username, status
 				FROM Messages
 				WHERE conversation_id = ?
 				ORDER BY timestamp DESC
 				LIMIT 1
 			) m ON g.conversation_id = m.conversation_id
 			WHERE g.conversation_id = ?
-		`, conversationID, conversationID).Scan(&snippet.GroupName, &snippet.LastMessage, &snippet.LastMessageTime, &snippet.Status)
+		`, conversationID, conversationID).Scan(&snippet.GroupID, &snippet.GroupName, &snippet.LastMessage, &snippet.LastMessageTime, &snippet.LastMessageSender, &snippet.Status)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get group conversation details: %w", err)
 		}

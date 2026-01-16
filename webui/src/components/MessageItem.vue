@@ -8,9 +8,55 @@ export default {
     timestamp: String,
     attachment: Boolean,
     reactions: Array,
+    status: String,
     replyingToId: [String, Number],
     replyingToSender: String,
     replyingToContent: String
+  },
+  computed: {
+    isOwnMessage() {
+      return this.getUsername() === this.sender;
+    },
+    statusIcon() {
+      if (!this.isOwnMessage) return '';
+      switch(this.status) {
+        case 'sent':
+          return '✓';
+        case 'delivered':
+        case 'received':
+          return '✓✓';
+        default:
+          return '';
+      }
+    },
+    formattedTimestamp() {
+      if (!this.timestamp) return '';
+      
+      const msgDate = new Date(this.timestamp);
+      const now = new Date();
+      
+      // Calculate days difference
+      const msgDateOnly = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate());
+      const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffTime = nowDateOnly - msgDateOnly;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      // Format time (HH:MM)
+      const hours = String(msgDate.getHours()).padStart(2, '0');
+      const minutes = String(msgDate.getMinutes()).padStart(2, '0');
+      const timeStr = `${hours}:${minutes}`;
+      
+      // Return formatted string
+      if (diffDays === 0) {
+        return timeStr;
+      } else {
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+        const day = msgDate.getDate();
+        const month = months[msgDate.getMonth()];
+        return `${day} ${month}, ${timeStr}`;
+      }
+    }
   },
   methods: {
     downloadAttachments() {
@@ -87,7 +133,7 @@ export default {
                     </span>
                 </div>
             </div>
-        <div class="p-2 small ">{{ timestamp}}</div>   
+        <div class="p-2 small ">{{ formattedTimestamp }} <span v-if="statusIcon" class="text-primary ms-1">{{ statusIcon }}</span></div>   
         </div>
             <div v-if="replyingToSender" class="p-2 border-start border-info bg-light" style="margin: 0.5rem; padding: 0.5rem;">
               <small class="text-muted d-block">Replying to <strong>{{ replyingToSender }}</strong>:</small>

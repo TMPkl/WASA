@@ -75,7 +75,7 @@ export default {
     }
   },
   methods: {
-    async open() {
+    async open(filterExistingContacts = true, groupMembers = []) {
       this.error = null;
       this.loading = true;
       try {
@@ -89,24 +89,32 @@ export default {
         });
         let allUsers = Array.isArray(usersRes.data) ? usersRes.data : (usersRes.data.users || []);
 
-        const convRes = await axios({
-          method: 'get',
-          url: `${__API_URL__}/conversations/${currentUsername}`,
-          headers: {
-            Authorization: token ? `Bearer ${token}` : undefined
-          }
-        });
-        const conversations = Array.isArray(convRes.data) ? convRes.data : [];
+        if (filterExistingContacts) {
+          const convRes = await axios({
+            method: 'get',
+            url: `${__API_URL__}/conversations/${currentUsername}`,
+            headers: {
+              Authorization: token ? `Bearer ${token}` : undefined
+            }
+          });
+          const conversations = Array.isArray(convRes.data) ? convRes.data : [];
 
-        const existingContacts = new Set(
-          conversations
-            .filter(conv => conv.ConversationType === 'private')
-            .map(conv => conv.OtherUsername)
-        );
+          const existingContacts = new Set(
+            conversations
+              .filter(conv => conv.ConversationType === 'private')
+              .map(conv => conv.OtherUsername)
+          );
 
-         this.itemsInternal = allUsers.filter(user => 
-          user !== currentUsername && !existingContacts.has(user)
-        );
+          this.itemsInternal = allUsers.filter(user => 
+            user !== currentUsername && !existingContacts.has(user)
+          );
+        } else {
+          // Filter out current user and existing group members
+          const groupMembersSet = new Set(groupMembers || []);
+          this.itemsInternal = allUsers.filter(user => 
+            user !== currentUsername && !groupMembersSet.has(user)
+          );
+        }
       } catch (e) {
         this.itemsInternal = [];
         this.error = e?.response?.data?.error || e.message || 'Failed to load users';

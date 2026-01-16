@@ -30,6 +30,7 @@ export default {
       :status="conversation.status"
       :is-private="conversation.isPrivate"
       :other-username="conversation.otherUsername"
+      :group-id="conversation.groupId"
       @click="goToConversation(conversation.id)"
       style="cursor:pointer;"
     />

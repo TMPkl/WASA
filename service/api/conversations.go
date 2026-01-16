@@ -34,7 +34,7 @@ func (rt *_router) GetMyConversations(w http.ResponseWriter, r *http.Request, ps
 
 	var conversations []database.ConvSnippet
 	for _, conID := range conIDs {
-		snippet, err := rt.db.GetConversationSnippet(conID)
+		snippet, err := rt.db.GetConversationSnippet(conID, username)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to get conversation snippet: %v", err), http.StatusInternalServerError)
 			return

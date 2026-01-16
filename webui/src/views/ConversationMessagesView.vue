@@ -27,11 +27,26 @@ export default {
       users: [],
       selectedUser: null,
       replyingTo: null,
+      participants: [],
     };
   },
   async mounted() {
     this.loading = true;
     try {
+      await this.loadConversationData();
+    } catch (e) {
+      this.error = e?.response?.data?.error || e.message || 'Error loading messages';
+    } finally {
+      this.loading = false;
+    }
+
+    this.scrollToBottom();
+  },
+  unmounted() {
+    this.stopAutoRefresh();
+  },
+  methods: {
+    async loadConversationData() {
       const token = localStorage.getItem('token');
       if (!this.id) {
         this.error = 'No conversation ID ';
@@ -54,6 +69,7 @@ export default {
       //{ conversation_id, is_group, participants, messages: [ { id, sender_username, content, timestamp, has_attachment } ] }
       this.isGroup = res.data.is_group || false;
       this.groupId = res.data.group_id || null;
+      this.participants = res.data.participants || [];
       this.messages = (res.data.messages || []).map(msg => ({
         id: msg.id,
         sender: msg.sender_username,
@@ -61,6 +77,7 @@ export default {
         timestamp: msg.timestamp,
         attachment: msg.has_attachment,
         reactions: msg.reactions || [],
+        status: msg.status || '',
         replyingToId: msg.replying_to_id || null,
         replyingToSender: msg.replying_to_sender || null,
         replyingToContent: msg.replying_to_content || null
@@ -76,18 +93,10 @@ export default {
           this.loadUserPhoto(otherUser);
         }
       }
-    } catch (e) {
-      this.error = e?.response?.data?.error || e.message || 'Error loading messages';
-    } finally {
-      this.loading = false;
-    }
 
-    this.scrollToBottom();
-  },
-  unmounted() {
-    this.stopAutoRefresh();
-  },
-  methods: {
+      // Update status to "received" for messages sent by others
+      await this.updateReceivedMessagesStatus(username);
+    },
     async handleSendMessage({ content, files, replyingToId }) {
       this.sending = true;
       try {
@@ -174,6 +183,7 @@ export default {
         timestamp: msg.timestamp,
         attachment: msg.has_attachment,
         reactions: msg.reactions || [],
+        status: msg.status || '',
         replyingToId: msg.replying_to_id || null,
         replyingToSender: msg.replying_to_sender || null,
         replyingToContent: msg.replying_to_content || null
@@ -205,7 +215,7 @@ export default {
     openAddUserModal() {
       if (!this.isGroup) return;
       this.$nextTick(() => {
-        if (this.$refs.userList && this.$refs.userList.open) this.$refs.userList.open(this.id);
+        if (this.$refs.userList && this.$refs.userList.open) this.$refs.userList.open(false, this.participants);
       });
     },
     handleUserSelect(username) {
@@ -275,6 +285,38 @@ export default {
       });
     },
 
+    async updateReceivedMessagesStatus(currentUsername) {
+      const token = localStorage.getItem('token');
+      
+      // Find messages sent by others that need status update
+      const messagesToUpdate = this.messages.filter(msg => 
+        msg.sender !== currentUsername && 
+        msg.status === 'sent'
+      );
+
+      // Update each message status to "received"
+      for (const msg of messagesToUpdate) {
+        try {
+          await axios({
+            method: 'patch',
+            url: `${__API_URL__}/messages/${msg.id}/status`,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            data: {
+              username: currentUsername,
+              status: 'received'
+            }
+          });
+          // Update local message status
+          msg.status = 'received';
+        } catch (e) {
+          console.error(`Failed to update status for message ${msg.id}:`, e);
+        }
+      }
+    },
+
     async loadUserPhoto(username) {
       try {
         const token = localStorage.getItem('token');
@@ -293,28 +335,30 @@ export default {
       }
     },
 
-    handleSelectUser(username, item) {
+    async handleSelectUser(username, item) {
     console.log('Wybrano username:', username);
     console.log('Wybrany obiekt:', item);
     const my_username = localStorage.getItem('username');
     
-    axios.post(`${__API_URL__}/groups/${this.groupId}/members`, {
-      username: my_username,
-      user_to_add: username
-    }, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => {
+    try {
+      const response = await axios.post(`${__API_URL__}/groups/${this.groupId}/members`, {
+        username: my_username,
+        user_to_add: username
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('dodany:', response.data);
       this.error = null;
-    })
-    .catch(error => {
+      
+      // Reload conversation data to update participants list
+      await this.loadConversationData();
+    } catch (error) {
       console.error('Błąd:', error.response ? error.response.data : error.message);
       this.error = error.response?.data || error.message;
-    });
+    }
 
     this.selectedUser = item;
   }

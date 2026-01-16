@@ -26,6 +26,7 @@ export default {
       try {
         const data = await getConversations();
         const conversations = Array.isArray(data) ? data : [];
+        const currentUsername = localStorage.getItem('username');
         this.conversations = conversations
           .map(conv => ({
             id: conv.ConversationID,
@@ -33,9 +34,10 @@ export default {
             lastMessage: conv.LastMessage || '',
             time: this.formatTime(conv.LastMessageTime),
             timestamp: conv.LastMessageTime,
-            status: conv.Status || '',
+            status: (conv.LastMessageSender === currentUsername) ? (conv.Status || '') : '',
             isPrivate: conv.ConversationType === 'private',
-            otherUsername: conv.OtherUsername
+            otherUsername: conv.OtherUsername,
+            groupId: conv.GroupID
           }))
           .sort((a, b) => {
             if (!a.timestamp) return 1;
