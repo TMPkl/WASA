@@ -18,7 +18,7 @@ type WebAPIConfiguration struct {
 		Path string `conf:"default:demo/config.yml" yaml:"ConfigPath"`
 	} `yaml:"Config"`
 	Web struct {
-		APIHost         string        `conf:"default:0.0.0.0:3010" yaml:"APIHost"`
+		APIHost         string        `conf:"default:0.0.0.0:3000" yaml:"APIHost"`
 		DebugHost       string        `conf:"default:0.0.0.0:4000" yaml:"DebugHost"`
 		ReadTimeout     time.Duration `conf:"default:5s" yaml:"ReadTimeout"`
 		WriteTimeout    time.Duration `conf:"default:5s" yaml:"WriteTimeout"`
