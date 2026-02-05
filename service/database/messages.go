@@ -297,6 +297,9 @@ func (db *appdbimpl) GetReactionsID(baseMessageID int) ([]int, bool) {
 		}
 		reactionsIDs = append(reactionsIDs, reactionID)
 	}
+	if err := res.Err(); err != nil {
+		return nil, false
+	}
 	return reactionsIDs, true
 }
 

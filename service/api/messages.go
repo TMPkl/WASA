@@ -16,11 +16,11 @@ import (
 )
 
 type SendMessageRequest struct {
-	Content         string //`json:"content"`
-	ConversationID  int    //`json:"conversationId"`/// trzeba tez ustalic jak wygladaje te id
-	SenderUsername  string //`json:"senderUsername"`
-	ReciverUsername string //`json:"receiverUsername"`
-	ReplyingToID    int64  //`json:"replyingToId"` - ID of the message this is replying to
+	Content         string // `json:"content"`
+	ConversationID  int    // `json:"conversationId"` trzeba tez ustalic jak wygladaje te id
+	SenderUsername  string // `json:"senderUsername"`
+	ReciverUsername string // `json:"receiverUsername"`
+	ReplyingToID    int64  // `json:"replyingToId"` - ID of the message this is replying to
 	Attachmemnts    attachments.AttachmentsPack
 }
 
@@ -132,7 +132,7 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		var message database.Message
 		var err error
 		if rqst.ReplyingToID > 0 {
-			message, err = rt.db.SaveMessageWithReply(rqst.SenderUsername, rqst.Content, attachmentsPack, uint(rqst.ConversationID), int64(rqst.ReplyingToID))
+			message, err = rt.db.SaveMessageWithReply(rqst.SenderUsername, rqst.Content, attachmentsPack, uint(rqst.ConversationID), rqst.ReplyingToID)
 		} else {
 			message, err = rt.db.SaveMessage(rqst.SenderUsername, rqst.Content, attachmentsPack, uint(rqst.ConversationID))
 		}
@@ -195,7 +195,7 @@ func (rt *_router) SendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 
 	var message database.Message
 	if rqst.ReplyingToID > 0 {
-		message, err = rt.db.SaveMessageWithReply(rqst.SenderUsername, rqst.Content, attachmentsPack, convID, int64(rqst.ReplyingToID))
+		message, err = rt.db.SaveMessageWithReply(rqst.SenderUsername, rqst.Content, attachmentsPack, convID, rqst.ReplyingToID)
 	} else {
 		message, err = rt.db.SaveMessage(rqst.SenderUsername, rqst.Content, attachmentsPack, convID)
 	}

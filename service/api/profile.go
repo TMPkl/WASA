@@ -254,6 +254,47 @@ func (rt *_router) SetProfilePhoto(w http.ResponseWriter, r *http.Request, ps ht
 
 	w.WriteHeader(http.StatusOK)
 }
+
+func (rt *_router) GetMyPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	tokenStr := authHeader[len("Bearer "):]
+	token, err := verifyJWT(tokenStr)
+	if err != nil || token == nil || !token.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	username, ok := claims["sub"].(string)
+	if !ok || username == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	photoData, err := rt.db.GetProfilePhoto(username)
+	if err != nil {
+		rt.baseLogger.Printf(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if photoData == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(photoData)
+}
+
 func (rt *_router) GetUserProfilePhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	username_photo := ps.ByName("username")
 	if username_photo == "" {
