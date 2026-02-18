@@ -1,4 +1,5 @@
 # WASA
+## 17-02-2026 project passed on 30/30  
 ### This is a repository for the WASAtext project
 [*Web And Software Architecture*](https://gamificationlab.uniroma1.it/en/wasa/) is a course I have been attending at Sapienza University of Rome during the academic year 2025/2026 as part of my Erasmus+ exchange program.  
 
@@ -36,13 +37,13 @@ According to the Go ideology (as far as I get it), the methods responsible for h
 
 According to the course requirements, I use bearer tokens for user authentication, which are generated using the `github.com/golang-jwt/jwt/v5` package. 
 
-napisac jaki jestem super i ze robie to nawet na tranzakcjach (czasami jak trzeba)
+Database operations that involve multiple related changes are wrapped in **transactions** to ensure data consistency and atomicity.
 
-napisac ze na moje male potrzeby zapisuje zdjecia w bazie jako bloby ale wiem ze to zle i w realnych projektach sie tak nie robi
+For simplicity, **images are stored directly in the database as BLOBs**. While this approach works fine for a small-scale project like this, it's not recommended for production systems where a dedicated file storage would be more appropriate.
 
-napisac ze obrabiam zdjecia tak aby byly zapisywane jako kwadraty 200x200px latwe do odczytu i wyslania potel do frontu i ze uzywam do tego biblioteki imaging
+All uploaded images are **processed and resized to 200x200px squares** using the `github.com/disintegration/imaging` library. This ensures consistent dimensions for profile pictures and group photos, making them lightweight and easy to serve to the frontend.
 
-Napisac ze czasami endpointy oczekuja requestow w formiacie JSON a czasami dajko form-data kiedy sa przesylane pliki i ze to jest opisane w api.yaml i ze frontend to obsluguje albo bardzije bedzie obslugiwac 
+Depending on the endpoint, the API accepts either **JSON** or **multipart/form-data** request bodies. File uploads (photos, attachments) require form-data, while other operations use JSON. The expected format for each endpoint is specified in the `api.yaml` OpenAPI specification.
 
 ## 4. Docker
 The application is containerized using Docker. The `Dockerfile.backend` and `Dockerfile.frontend` files are used to build the backend and frontend images, respectively.
