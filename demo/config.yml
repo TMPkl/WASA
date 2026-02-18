@@ -13,7 +13,7 @@ DB:
 #  file: /tmp/debug.log
 #  combinedtostdout: true
 Web:
-  APIHost: 0.0.0.0:3000
+  APIHost: 0.0.0.0:3010
   DebugHost: 0.0.0.0:4010
 #  readtimeout: 5s
 #  writetimeout: 5s

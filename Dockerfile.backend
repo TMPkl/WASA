@@ -6,5 +6,5 @@ RUN go build -o /app/webapi ./cmd/webapi
 FROM debian:stable
 WORKDIR /executable_backend/
 COPY --from=backend_builder /app/webapi .
-EXPOSE 3000
+EXPOSE 3010
 CMD ["./webapi"]

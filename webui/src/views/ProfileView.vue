@@ -103,7 +103,7 @@ export default {
         <label class="form-label">Change username</label>
         <div class="d-flex gap-2">
           <input v-model="newUsername" class="form-control" placeholder="new username" />
-          <button class="btn btn-primary" :disabled="!newUsername || loading" @click="changeUsername">Change</button>
+          <button class="btn btn-primary" :disabled="!newUsername || loading" @click="changeUsername">Change1</button>
         </div>
       </div>
 

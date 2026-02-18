@@ -288,19 +288,11 @@ func (rt *_router) UpdateGroupPhoto(w http.ResponseWriter, r *http.Request, ps h
 	*/
 	groupIDParam := ps.ByName("groupId")
 
-	username, _, err := r.FormFile("username")
-	if err != nil {
+	rqstUsername := r.FormValue("username")
+	if rqstUsername == "" {
 		http.Error(w, "username is required", http.StatusBadRequest)
 		return
 	}
-	defer username.Close()
-	buf := make([]byte, 64)
-	n, err := username.Read(buf)
-	if err != nil {
-		http.Error(w, "failed to read username", http.StatusBadRequest)
-		return
-	}
-	rqstUsername := string(buf[:n])
 
 	authorised, err := rt.Authorise(w, r, rqstUsername)
 	if err != nil {

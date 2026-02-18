@@ -61,7 +61,7 @@ The application is containerized using Docker. The `Dockerfile.backend` and `Doc
     ```
     to run it locally:
     ```
-    docker run -it -p 8081:3000 --rm wasatext-backend:latest
+    docker run -it -p 8081:3010 --rm wasatext-backend:latest
     ```
     Remember to set correct ports in order to connect frontend with backend!
     I didnt set cuz docker is only for grading purposes. If I were to host it somewhere, I would use docker-compose to manage both containers and their networking.

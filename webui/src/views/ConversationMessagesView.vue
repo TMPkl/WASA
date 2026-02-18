@@ -192,6 +192,9 @@ export default {
     handleMessageDeleted(messageId) {
       this.messages = this.messages.filter(msg => msg.id !== messageId);
     },
+    async handleReactionChanged() {
+      await this.loadMessages();
+    },
     handleReplyMessage(messageId) {
       const message = this.messages.find(msg => msg.id === messageId);
       if (message) {
@@ -373,7 +376,7 @@ export default {
     <div class="messages flex-grow-1 mb-2" ref="messagesContainer">
       <div v-if="loading">Loading...</div>
       <div v-else-if="error" class="text-danger">{{ error }}</div>
-      <MessageView v-else :messages="messages" @message-deleted="handleMessageDeleted" @reply-message="handleReplyMessage" />
+      <MessageView v-else :messages="messages" @message-deleted="handleMessageDeleted" @reply-message="handleReplyMessage" @reaction-added="handleReactionChanged" @reaction-removed="handleReactionChanged" />
     </div>
 
     <MessageInputForm
