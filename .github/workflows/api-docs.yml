@@ -24,7 +24,7 @@ jobs:
 
       - name: Build API docs
         run: |
-          npx @redocly/cli build-docs doc/api.yaml \
+          npx @redocly/cli@1.25.5 build-docs doc/api.yaml \
             --output public/index.html
 
       - name: Upload Pages artifact
